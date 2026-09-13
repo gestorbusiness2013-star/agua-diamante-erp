@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 208 100% 97%;
+    --foreground: 231 53% 16%;
+    --card: 208 100% 100%;
+    --card-foreground: 231 53% 16%;
+    --popover: 208 100% 100%;
+    --popover-foreground: 231 53% 16%;
+    --primary: 218 93% 61%;
+    --primary-foreground: 213 100% 96%;
+    --secondary: 208 100% 92%;
+    --secondary-foreground: 231 53% 16%;
+    --muted: 220 10% 90%;
+    --muted-foreground: 220 10% 40%;
+    --accent: 208 100% 94%;
+    --accent-foreground: 231 53% 16%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 213 100% 96%;
+    --border: 220 10% 85%;
+    --input: 220 10% 85%;
+    --ring: 218 93% 61%;
+    --chart-1: 218 93% 61%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 43 74% 66%;
+    --chart-4: 28 93% 61%;
+    --chart-5: 340 82% 52%;
+    --radius: 0.5rem;
+    --sidebar-gradient-start: 231 50% 12%;
+    --sidebar-gradient-end: 225 93% 31%;
+    --sidebar-foreground: 213 100% 96%;
+    --sidebar-primary: 218 93% 61%;
+    --sidebar-primary-foreground: 213 100% 96%;
+    --sidebar-accent: 218 93% 61%;
+    --sidebar-accent-foreground: 213 100% 96%;
+    --sidebar-border: 231 50% 18%;
+    --sidebar-ring: 218 93% 61%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+.leaflet-container {
+  z-index: 0;
+}

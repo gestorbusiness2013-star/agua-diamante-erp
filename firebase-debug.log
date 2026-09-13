@@ -1,0 +1,643 @@
+[debug] [2026-08-26T14:34:06.945Z] ----------------------------------------------------------------------
+[debug] [2026-08-26T14:34:06.972Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\USER\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --non-interactive --debug
+[debug] [2026-08-26T14:34:06.974Z] CLI Version:   15.22.4
+[debug] [2026-08-26T14:34:06.974Z] Platform:      win32
+[debug] [2026-08-26T14:34:06.975Z] Node Version:  v24.14.1
+[debug] [2026-08-26T14:34:06.975Z] Detected Agent: antigravity
+[debug] [2026-08-26T14:34:06.977Z] Time:          Wed Aug 26 2026 10:34:06 GMT-0400 (hora de Venezuela)
+[debug] [2026-08-26T14:34:06.978Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-08-26T14:34:23.817Z] Object "/apphosting" in "firebase.json" is missing required property: {"missingProperty":"ignore"}
+[debug] [2026-08-26T14:34:23.833Z] Field "/apphosting" in "firebase.json" is possibly invalid: must be array
+[debug] [2026-08-26T14:34:23.834Z] Field "/apphosting" in "firebase.json" is possibly invalid: must match a schema in anyOf
+[debug] [2026-08-26T14:34:24.079Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-26T14:34:24.082Z] > authorizing via signed-in user (gestorbusiness2013@gmail.com)
+[debug] [2026-08-26T14:34:24.083Z] [iam] checking project agua-diamante-erp for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-08-26T14:34:24.097Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:34:24.100Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:34:24.126Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions [none]
+[debug] [2026-08-26T14:34:24.128Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions  x-goog-user-project=agua-diamante-erp
+[debug] [2026-08-26T14:34:24.129Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-08-26T14:34:25.891Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions 200
+[debug] [2026-08-26T14:34:25.891Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-08-26T14:34:25.900Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:34:25.900Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:34:25.902Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/agua-diamante-erp [none]
+[debug] [2026-08-26T14:34:26.287Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/agua-diamante-erp 200
+[debug] [2026-08-26T14:34:26.288Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/agua-diamante-erp {"projectId":"agua-diamante-erp","projectNumber":"913984904060","displayName":"Agua Diamante ERP","name":"projects/agua-diamante-erp","resources":{"hostingSite":"agua-diamante-erp"},"state":"ACTIVE","labels":{"firebase":"enabled"},"etag":"1_79845a63-ef2f-4734-9ec0-cd6991e9f1ff"}
+[debug] [2026-08-26T14:35:32.852Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:35:32.875Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:35:32.893Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/agua-diamante-erp/sites pageToken=&pageSize=10
+[debug] [2026-08-26T14:35:34.262Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/agua-diamante-erp/sites 200
+[debug] [2026-08-26T14:35:34.265Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/agua-diamante-erp/sites {"sites":[{"name":"projects/agua-diamante-erp/sites/agua-diamante-erp","defaultUrl":"https://agua-diamante-erp.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2026-08-26T14:35:34.273Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:35:34.274Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:35:34.289Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/agua-diamante-erp/sites 
+[debug] [2026-08-26T14:35:34.681Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/agua-diamante-erp/sites 200
+[debug] [2026-08-26T14:35:34.682Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/agua-diamante-erp/sites {"sites":[{"name":"projects/agua-diamante-erp/sites/agua-diamante-erp","defaultUrl":"https://agua-diamante-erp.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2026-08-26T14:35:34.684Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:35:34.686Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:35:34.687Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/agua-diamante-erp/webApps/-/config [none]
+[debug] [2026-08-26T14:35:35.241Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/agua-diamante-erp/webApps/-/config 200
+[debug] [2026-08-26T14:35:35.242Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/agua-diamante-erp/webApps/-/config {"projectId":"agua-diamante-erp","appId":"1:913984904060:web:e38dbeefc71cd0190262f9","storageBucket":"agua-diamante-erp.firebasestorage.app","apiKey":"AIzaSyCPzFOnYdEMT3_f8Sfs0w8Ui0zCYEuowng","authDomain":"agua-diamante-erp.firebaseapp.com","messagingSenderId":"913984904060","measurementId":"G-MERQJK1NKP","projectNumber":"913984904060","version":"2"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-08-26T14:36:39.516Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:36:39.516Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:36:39.517Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/agua-diamante-erp/sites/agua-diamante-erp [none]
+[debug] [2026-08-26T14:36:40.148Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/agua-diamante-erp/sites/agua-diamante-erp 200
+[debug] [2026-08-26T14:36:40.148Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/agua-diamante-erp/sites/agua-diamante-erp {"name":"projects/agua-diamante-erp/sites/agua-diamante-erp","defaultUrl":"https://agua-diamante-erp.web.app","type":"DEFAULT_SITE"}
+[info]   ▲ Next.js 14.2.35
+  - Environments: .env.local, .env
+
+
+[info]    Creating an optimized production build ...
+
+[info] Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+
+[info]  ⚠ Compiled with warnings
+
+
+[info] ./node_modules/@opentelemetry/sdk-node/build/src/TracerProviderWithEnvExporter.js
+Module not found: Can't resolve '@opentelemetry/exporter-jaeger' in 'C:\Users\USER\OneDrive\Desktop\DIAMANTE\project (6)\node_modules\@opentelemetry\sdk-node\build\src'
+
+Import trace for requested module:
+./node_modules/@opentelemetry/sdk-node/build/src/TracerProviderWithEnvExporter.js
+./node_modules/@opentelemetry/sdk-node/build/src/sdk.js
+./node_modules/@opentelemetry/sdk-node/build/src/index.js
+./node_modules/@genkit-ai/core/lib/tracing.js
+./node_modules/genkit/lib/tracing.js
+./node_modules/@genkit-ai/googleai/lib/gemini.js
+./node_modules/@genkit-ai/googleai/lib/index.mjs
+./src/ai/genkit.ts
+./src/app/actions/voice-action.ts
+
+./node_modules/handlebars/lib/index.js
+require.extensions is not supported by webpack. Use a loader instead.
+
+Import trace for requested module:
+./node_modules/handlebars/lib/index.js
+./node_modules/dotprompt/dist/index.js
+./node_modules/@genkit-ai/core/lib/registry.js
+./node_modules/genkit/lib/registry.js
+./node_modules/genkit/lib/genkit.js
+./node_modules/genkit/lib/index.mjs
+./src/ai/genkit.ts
+./src/app/actions/voice-action.ts
+
+./node_modules/handlebars/lib/index.js
+require.extensions is not supported by webpack. Use a loader instead.
+
+Import trace for requested module:
+./node_modules/handlebars/lib/index.js
+./node_modules/dotprompt/dist/index.js
+./node_modules/@genkit-ai/core/lib/registry.js
+./node_modules/genkit/lib/registry.js
+./node_modules/genkit/lib/genkit.js
+./node_modules/genkit/lib/index.mjs
+./src/ai/genkit.ts
+./src/app/actions/voice-action.ts
+
+./node_modules/handlebars/lib/index.js
+require.extensions is not supported by webpack. Use a loader instead.
+
+Import trace for requested module:
+./node_modules/handlebars/lib/index.js
+./node_modules/dotprompt/dist/index.js
+./node_modules/@genkit-ai/core/lib/registry.js
+./node_modules/genkit/lib/registry.js
+./node_modules/genkit/lib/genkit.js
+./node_modules/genkit/lib/index.mjs
+./src/ai/genkit.ts
+./src/app/actions/voice-action.ts
+
+./node_modules/require-in-the-middle/index.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+./node_modules/require-in-the-middle/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/node/instrumentation.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/node/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/index.js
+./node_modules/@opentelemetry/sdk-node/build/src/sdk.js
+./node_modules/@opentelemetry/sdk-node/build/src/index.js
+./node_modules/@genkit-ai/core/lib/tracing.js
+./node_modules/genkit/lib/tracing.js
+./node_modules/@genkit-ai/googleai/lib/gemini.js
+./node_modules/@genkit-ai/googleai/lib/index.mjs
+./src/ai/genkit.ts
+./src/app/actions/voice-action.ts
+
+
+[info] 
+
+
+[info] Source path: C:\Users\USER\OneDrive\Desktop\DIAMANTE\project (6)\src\app\globals.css
+
+[info] Setting up new context...
+
+[info] Finding changed files: 123.649ms
+
+[info] Reading changed files: 758.231ms
+
+[info] Sorting candidates: 22.737ms
+
+[info] Generate rules: 1.766s
+
+[info] Build stylesheet: 13.866ms
+
+[info] Potential classes:  6715
+
+[info] Active contexts:  1
+
+[info] JIT TOTAL: 3.880s
+
+
+
+[info]  ✓ Compiled successfully
+
+[info]    Skipping validation of types
+
+[info]    Skipping linting
+
+[info]    Collecting page data ...
+
+[info]    Generating static pages (0/20) ...
+
+[info]    Generating static pages (5/20) 
+
+[info]    Generating static pages (10/20) 
+
+[info]    Generating static pages (15/20) 
+
+[info]  ✓ Generating static pages (20/20)
+
+[info]    Finalizing page optimization ...
+
+[info]    Collecting build traces ...
+
+[info] 
+
+[info] Route (app)                              Size     First Load JS
+┌ ○ /                                    9.14 kB         234 kB
+├ ○ /_not-found                          880 B          89.1 kB
+├ ○ /dashboard                           12.3 kB         349 kB
+├ ○ /dashboard/compras                   5.66 kB         289 kB
+├ ○ /dashboard/customers                 11.1 kB         284 kB
+├ ○ /dashboard/gastos                    10.8 kB         308 kB
+├ ○ /dashboard/inventory                 9.88 kB         287 kB
+├ ○ /dashboard/market-analysis           3.99 kB         274 kB
+├ ○ /dashboard/movements                 3.92 kB         237 kB
+├ ○ /dashboard/nomina                    143 B          88.3 kB
+├ ○ /dashboard/production                11.7 kB         405 kB
+├ ○ /dashboard/routes                    6.59 kB         264 kB
+├ ○ /dashboard/sales                     9.81 kB         313 kB
+├ ○ /dashboard/suppliers                 4.1 kB          274 kB
+├ ○ /dashboard/users                     7.49 kB         284 kB
+├ ○ /dashboard/vendedores                7.24 kB         282 kB
+└ ○ /dashboard/warehouses                9.81 kB         284 kB
++ First Load JS shared by all            88.2 kB
+  ├ chunks/2117-6158d7c5821b691e.js      31.9 kB
+  ├ chunks/fd9d1056-0ebe245da16ea449.js  53.6 kB
+  └ other shared chunks (total)          2.64 kB
+
+
+[info] 
+○  (Static)  prerendered as static content
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • route with server action /dashboard/compras
+[info]  • route with server action /dashboard/movements
+[info]  • route with server action /dashboard/gastos
+[info]  • route with server action /dashboard/production
+[info]  • route with server action /dashboard/nomina
+[debug] [2026-08-26T14:40:13.385Z]  • route with server action /dashboard/customers
+[debug] [2026-08-26T14:40:13.385Z]  • route with server action /dashboard
+[debug] [2026-08-26T14:40:13.385Z]  • route with server action /dashboard/inventory
+[debug] [2026-08-26T14:40:13.385Z]  • route with server action /dashboard/suppliers
+[debug] [2026-08-26T14:40:13.385Z]  • route with server action /dashboard/users
+[debug] [2026-08-26T14:40:13.385Z]  • route with server action /dashboard/routes
+[debug] [2026-08-26T14:40:13.385Z]  • route with server action /dashboard/market-analysis
+[debug] [2026-08-26T14:40:13.385Z]  • route with server action /dashboard/warehouses
+[debug] [2026-08-26T14:40:13.386Z]  • route with server action /dashboard/vendedores
+[debug] [2026-08-26T14:40:13.386Z]  • route with server action /dashboard/sales
+[info] 
+[debug] [2026-08-26T14:40:21.203Z] skipping /dashboard/customers due to server action
+[debug] [2026-08-26T14:40:21.205Z] skipping /dashboard/gastos due to server action
+[debug] [2026-08-26T14:40:21.206Z] skipping /dashboard/nomina due to server action
+[debug] [2026-08-26T14:40:21.206Z] skipping /dashboard/movements due to server action
+[debug] [2026-08-26T14:40:21.206Z] skipping /dashboard/inventory due to server action
+[debug] [2026-08-26T14:40:21.206Z] skipping /dashboard/market-analysis due to server action
+[debug] [2026-08-26T14:40:21.207Z] skipping /dashboard/suppliers due to server action
+[debug] [2026-08-26T14:40:21.208Z] skipping /dashboard/routes due to server action
+[debug] [2026-08-26T14:40:21.208Z] skipping /dashboard/vendedores due to server action
+[debug] [2026-08-26T14:40:21.209Z] skipping /dashboard/warehouses due to server action
+[debug] [2026-08-26T14:40:21.209Z] skipping /dashboard/production due to server action
+[debug] [2026-08-26T14:40:21.209Z] skipping /dashboard due to server action
+[debug] [2026-08-26T14:40:21.209Z] skipping /dashboard/compras due to server action
+[debug] [2026-08-26T14:40:21.209Z] skipping /dashboard/users due to server action
+[debug] [2026-08-26T14:40:21.210Z] skipping /dashboard/sales due to server action
+[debug] [2026-08-26T14:40:44.476Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:40:44.477Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:40:44.478Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/agua-diamante-erp/sites/agua-diamante-erp [none]
+[debug] [2026-08-26T14:40:45.076Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/agua-diamante-erp/sites/agua-diamante-erp 200
+[debug] [2026-08-26T14:40:45.076Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/agua-diamante-erp/sites/agua-diamante-erp {"name":"projects/agua-diamante-erp/sites/agua-diamante-erp","defaultUrl":"https://agua-diamante-erp.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-08-26T14:41:50.906Z] [web frameworks] effective firebase.json:  {
+  "hosting": [
+    {
+      "source": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "site": "agua-diamante-erp",
+      "rewrites": [
+        {
+          "source": "**",
+          "function": {
+            "functionId": "ssraguadiamanteerp",
+            "region": "us-central1",
+            "pinTag": true
+          }
+        }
+      ],
+      "redirects": [],
+      "headers": [
+        {
+          "source": "/_not-found",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/_not-found/layout,_N_T_/_not-found/page,_N_T_/_not-found"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/gastos",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/gastos/layout,_N_T_/dashboard/gastos/page,_N_T_/dashboard/gastos"
+            }
+          ]
+        },
+        {
+          "source": "/favicon.ico",
+          "headers": [
+            {
+              "key": "cache-control",
+              "value": "public, max-age=0, must-revalidate"
+            },
+            {
+              "key": "content-type",
+              "value": "image/x-icon"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/favicon.ico/layout,_N_T_/favicon.ico/route,_N_T_/favicon.ico"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/production",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/production/layout,_N_T_/dashboard/production/page,_N_T_/dashboard/production"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/movements",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/movements/layout,_N_T_/dashboard/movements/page,_N_T_/dashboard/movements"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/compras",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/compras/layout,_N_T_/dashboard/compras/page,_N_T_/dashboard/compras"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/page,_N_T_/dashboard"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/customers",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/customers/layout,_N_T_/dashboard/customers/page,_N_T_/dashboard/customers"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/nomina",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/nomina/layout,_N_T_/dashboard/nomina/page,_N_T_/dashboard/nomina"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/inventory",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/inventory/layout,_N_T_/dashboard/inventory/page,_N_T_/dashboard/inventory"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/suppliers",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/suppliers/layout,_N_T_/dashboard/suppliers/page,_N_T_/dashboard/suppliers"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/routes",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/routes/layout,_N_T_/dashboard/routes/page,_N_T_/dashboard/routes"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/users",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/users/layout,_N_T_/dashboard/users/page,_N_T_/dashboard/users"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/vendedores",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/vendedores/layout,_N_T_/dashboard/vendedores/page,_N_T_/dashboard/vendedores"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/warehouses",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/warehouses/layout,_N_T_/dashboard/warehouses/page,_N_T_/dashboard/warehouses"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/market-analysis",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/market-analysis/layout,_N_T_/dashboard/market-analysis/page,_N_T_/dashboard/market-analysis"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/sales",
+          "headers": [
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/sales/layout,_N_T_/dashboard/sales/page,_N_T_/dashboard/sales"
+            }
+          ]
+        },
+        {
+          "source": "**/*.[jt]s",
+          "headers": [
+            {
+              "key": "Set-Cookie",
+              "value": "__FIREBASE_DEFAULTS__=eyJjb25maWciOnsicHJvamVjdElkIjoiYWd1YS1kaWFtYW50ZS1lcnAiLCJhcHBJZCI6IjE6OTEzOTg0OTA0MDYwOndlYjplMzhkYmVlZmM3MWNkMDE5MDI2MmY5Iiwic3RvcmFnZUJ1Y2tldCI6ImFndWEtZGlhbWFudGUtZXJwLmZpcmViYXNlc3RvcmFnZS5hcHAiLCJhcGlLZXkiOiJBSXphU3lDUHpGT25ZZEVNVDNfZjhTZnMwdzhVaTB6Q1lFdW93bmciLCJhdXRoRG9tYWluIjoiYWd1YS1kaWFtYW50ZS1lcnAuZmlyZWJhc2VhcHAuY29tIiwibWVzc2FnaW5nU2VuZGVySWQiOiI5MTM5ODQ5MDQwNjAiLCJtZWFzdXJlbWVudElkIjoiRy1NRVJRSksxTktQIiwicHJvamVjdE51bWJlciI6IjkxMzk4NDkwNDA2MCIsInZlcnNpb24iOiIyIn0sIl9hdXRoVG9rZW5TeW5jVVJMIjoiL19fc2Vzc2lvbiJ9; SameSite=Strict; Expires=2028-07-21T01:21:50.906Z; Path=/;"
+            }
+          ]
+        }
+      ],
+      "cleanUrls": true,
+      "trailingSlash": false,
+      "public": ".firebase\\agua-diamante-erp\\hosting",
+      "webFramework": "next_ssr"
+    }
+  ],
+  "functions": [
+    {
+      "source": ".firebase\\agua-diamante-erp\\functions",
+      "codebase": "firebase-frameworks-agua-diamante-erp"
+    }
+  ]
+}
+[debug] [2026-08-26T14:41:50.912Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-26T14:41:50.917Z] > authorizing via signed-in user (gestorbusiness2013@gmail.com)
+[debug] [2026-08-26T14:41:50.918Z] [iam] checking project agua-diamante-erp for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2026-08-26T14:41:50.919Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:41:50.919Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:41:50.919Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions [none]
+[debug] [2026-08-26T14:41:50.920Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions  x-goog-user-project=agua-diamante-erp
+[debug] [2026-08-26T14:41:50.920Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-08-26T14:41:51.259Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions 200
+[debug] [2026-08-26T14:41:51.260Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'agua-diamante-erp'...
+[info] 
+[info] i  deploying functions, hosting, apphosting 
+[debug] [2026-08-26T14:41:51.274Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:41:51.274Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:41:51.275Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp [none]
+[debug] [2026-08-26T14:41:51.415Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp 200
+[debug] [2026-08-26T14:41:51.416Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp {"projectNumber":"913984904060","projectId":"agua-diamante-erp","lifecycleState":"ACTIVE","name":"Agua Diamante ERP","labels":{"monospace-workspace-id":"studio-8243304643","firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-06-21T22:30:44.178682Z"}
+[info] i  functions: preparing codebase firebase-frameworks-agua-diamante-erp for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2026-08-26T14:41:51.432Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:41:51.432Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:41:51.433Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/agua-diamante-erp/adminSdkConfig [none]
+[debug] [2026-08-26T14:41:51.905Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/agua-diamante-erp/adminSdkConfig 200
+[debug] [2026-08-26T14:41:51.906Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/agua-diamante-erp/adminSdkConfig {"projectId":"agua-diamante-erp","storageBucket":"agua-diamante-erp.firebasestorage.app"}
+[debug] [2026-08-26T14:41:51.908Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:41:51.910Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:41:51.910Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/agua-diamante-erp/configs [none]
+[debug] [2026-08-26T14:41:52.437Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/agua-diamante-erp/configs 200
+[debug] [2026-08-26T14:41:52.437Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/agua-diamante-erp/configs {}
+[debug] [2026-08-26T14:41:52.444Z] Validating nodejs source
+[warn] !  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] !  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2026-08-26T14:41:56.758Z] > [functions] package.json contents: {
+  "name": "nextn",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@genkit-ai/googleai": "^1.8.0",
+    "@genkit-ai/next": "^1.8.0",
+    "@hookform/resolvers": "^3.9.0",
+    "@radix-ui/react-accordion": "^1.2.3",
+    "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-avatar": "^1.1.3",
+    "@radix-ui/react-checkbox": "^1.1.4",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-menubar": "^1.1.6",
+    "@radix-ui/react-popover": "^1.1.6",
+    "@radix-ui/react-progress": "^1.1.2",
+    "@radix-ui/react-radio-group": "^1.2.3",
+    "@radix-ui/react-scroll-area": "^1.2.3",
+    "@radix-ui/react-select": "^2.1.6",
+    "@radix-ui/react-separator": "^1.1.2",
+    "@radix-ui/react-slider": "^1.2.3",
+    "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-switch": "^1.1.3",
+    "@radix-ui/react-tabs": "^1.1.3",
+    "@radix-ui/react-toast": "^1.2.6",
+    "@radix-ui/react-tooltip": "^1.1.8",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "dotenv": "^16.5.0",
+    "firebase": "^10.12.3",
+    "genkit": "^1.8.0",
+    "install": "^0.13.0",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.475.0",
+    "next": "14.2.35",
+    "patch-package": "^8.0.0",
+    "react": "^18.3.1",
+    "react-day-picker": "^8.10.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.52.1",
+    "react-leaflet": "^4.2.1",
+    "recharts": "^2.15.1",
+    "tailwind-merge": "^2.4.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.23.8",
+    "firebase-frameworks": "^0.11.0",
+    "firebase-functions": "^6.0.1",
+    "firebase-admin": "^11.11.1"
+  },
+  "overrides": {
+    "@genkit-ai/next": {
+      "next": "$next"
+    }
+  },
+  "main": "server.js",
+  "engines": {
+    "node": "24"
+  }
+}
+[debug] [2026-08-26T14:41:56.759Z] Building nodejs source
+[info] i  functions: Loading and analyzing source code for codebase firebase-frameworks-agua-diamante-erp to determine what to deploy 
+[debug] [2026-08-26T14:41:56.762Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-08-26T14:41:56.793Z] Found firebase-functions binary at 'C:\Users\USER\OneDrive\Desktop\DIAMANTE\project (6)\.firebase\agua-diamante-erp\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8885
+
+[error] 
+[error] Error: User code failed to load. Cannot determine backend specification. Timeout after 10000. See https://firebase.google.com/docs/functions/tips#avoid_deployment_timeouts_during_initialization'
+[debug] [2026-08-26T14:48:32.546Z] ----------------------------------------------------------------------
+[debug] [2026-08-26T14:48:32.567Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\USER\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --non-interactive --debug
+[debug] [2026-08-26T14:48:32.569Z] CLI Version:   15.22.4
+[debug] [2026-08-26T14:48:32.569Z] Platform:      win32
+[debug] [2026-08-26T14:48:32.569Z] Node Version:  v24.14.1
+[debug] [2026-08-26T14:48:32.569Z] Detected Agent: antigravity
+[debug] [2026-08-26T14:48:32.570Z] Time:          Wed Aug 26 2026 10:48:32 GMT-0400 (hora de Venezuela)
+[debug] [2026-08-26T14:48:32.570Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-08-26T14:48:46.726Z] Object "/apphosting" in "firebase.json" is missing required property: {"missingProperty":"ignore"}
+[debug] [2026-08-26T14:48:46.728Z] Field "/apphosting" in "firebase.json" is possibly invalid: must be array
+[debug] [2026-08-26T14:48:46.728Z] Field "/apphosting" in "firebase.json" is possibly invalid: must match a schema in anyOf
+[debug] [2026-08-26T14:48:46.746Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-26T14:48:46.747Z] > authorizing via signed-in user (gestorbusiness2013@gmail.com)
+[debug] [2026-08-26T14:48:46.747Z] [iam] checking project agua-diamante-erp for permissions ["firebase.projects.get"]
+[debug] [2026-08-26T14:48:46.755Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:48:46.756Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:48:46.760Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions [none]
+[debug] [2026-08-26T14:48:46.761Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions  x-goog-user-project=agua-diamante-erp
+[debug] [2026-08-26T14:48:46.762Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions {"permissions":["firebase.projects.get"]}
+[debug] [2026-08-26T14:48:47.235Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions 200
+[debug] [2026-08-26T14:48:47.236Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/agua-diamante-erp:testIamPermissions {"permissions":["firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'agua-diamante-erp'...
+[info] 
+[info] i  deploying apphosting 
+[debug] [2026-08-26T14:48:47.247Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:48:47.248Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:48:47.259Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/agua-diamante-erp/services/developerconnect.googleapis.com [none]
+[debug] [2026-08-26T14:48:47.259Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/agua-diamante-erp/services/developerconnect.googleapis.com  x-goog-user-project=agua-diamante-erp
+[debug] [2026-08-26T14:48:47.757Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/agua-diamante-erp/services/developerconnect.googleapis.com 200
+[debug] [2026-08-26T14:48:47.757Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/agua-diamante-erp/services/developerconnect.googleapis.com [omitted]
+[debug] [2026-08-26T14:48:47.758Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:48:47.758Z] Checked if tokens are valid: true, expires at: 1787758406928
+[debug] [2026-08-26T14:48:47.759Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/agua-diamante-erp/services/developerconnect.googleapis.com:enable [none]
+[debug] [2026-08-26T14:48:47.759Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/agua-diamante-erp/services/developerconnect.googleapis.com:enable  x-goog-user-project=agua-diamante-erp
+[debug] [2026-08-26T14:48:48.115Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/agua-diamante-erp/services/developerconnect.googleapis.com:enable 400
+[debug] [2026-08-26T14:48:48.116Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/agua-diamante-erp/services/developerconnect.googleapis.com:enable [omitted]
+[error] 
+[error] Error: Request to https://serviceusage.googleapis.com/v1/projects/agua-diamante-erp/services/developerconnect.googleapis.com:enable had HTTP Error: 400, Billing account for project '913984904060' is not open. Billing must be enabled for activation of service(s) 'secretmanager.googleapis.com' to proceed.
+Help Token: AbluAGvpRnNgJm-J27jkujXdP6QKmpzf4R0i-4kF_EGZJEu5tOpRKsE5FnsV1JGwZ2jo5VQaA7BcVf1Z0xZ5ml4bLexqbfUosHdFed9UucntGowQ
+[debug] [2026-08-26T14:48:48.349Z] Error Context: {
+  "body": {
+    "error": {
+      "code": 400,
+      "message": "Billing account for project '913984904060' is not open. Billing must be enabled for activation of service(s) 'secretmanager.googleapis.com' to proceed.\nHelp Token: AbluAGvpRnNgJm-J27jkujXdP6QKmpzf4R0i-4kF_EGZJEu5tOpRKsE5FnsV1JGwZ2jo5VQaA7BcVf1Z0xZ5ml4bLexqbfUosHdFed9UucntGowQ",
+      "status": "FAILED_PRECONDITION",
+      "details": [
+        {
+          "@type": "type.googleapis.com/google.rpc.PreconditionFailure",
+          "violations": [
+            {
+              "type": "googleapis.com/billing-enabled",
+              "subject": "?error_code=390002&project=913984904060&services=secretmanager.googleapis.com"
+            }
+          ]
+        },
+        {
+          "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+          "reason": "UREQ_PROJECT_BILLING_NOT_OPEN",
+          "domain": "serviceusage.googleapis.com/billing-enabled",
+          "metadata": {
+            "project": "913984904060",
+            "services": "secretmanager.googleapis.com"
+          }
+        }
+      ]
+    }
+  },
+  "response": {
+    "statusCode": 400
+  }
+}
