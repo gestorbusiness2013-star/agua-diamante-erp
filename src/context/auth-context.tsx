@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [toast]);
 
     const login = (email: string, password: string) => signInWithEmailAndPassword(auth, email, password).then(() => {});
-    const logout = () => signOut(auth).then(() => router.push('/'));
+    const logout = () => signOut(auth).then(() => router.push('/login'));
 
     return <AuthContext.Provider value={{ currentUser, loading, login, logout }}>{children}</AuthContext.Provider>;
 }

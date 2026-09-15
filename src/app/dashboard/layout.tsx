@@ -64,7 +64,7 @@ function DashboardLayoutContent({
   // This effect's only job is to redirect if authentication is resolved and there's no user.
   useEffect(() => {
     if (!authLoading && !currentUser) {
-      router.push('/');
+      router.push('/login');
     }
   }, [currentUser, authLoading, router]);
 
