@@ -64,9 +64,9 @@ export default function LandingPage() {
         <div className="diamante-hero-content">
           <div className="diamante-badge">💎 Pureza Natural</div>
           <h1 className="diamante-hero-title">
-            El Agua que<br />
-            <span className="diamante-gradient-text">Brilla como un</span><br />
-            Diamante
+            Diamante<br />
+            <span className="diamante-gradient-text">Un Tesoro de</span><br />
+            la Naturaleza
           </h1>
           <p className="diamante-hero-subtitle">
             Agua purificada de la más alta calidad, directamente
