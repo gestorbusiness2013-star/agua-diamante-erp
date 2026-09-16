@@ -24,8 +24,8 @@ import { Separator } from "@/components/ui/separator";
 export default function LoginPage() {
   const isFirebaseConfigured = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID && process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
   
-  const [email, setEmail] = useState("robertdavi@hotmail.com");
-  const [password, setPassword] = useState("ADMIN123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { login, currentUser, loading: authLoading } = useAuth();
