@@ -101,21 +101,31 @@ export default function SalesPage() {
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(s => 
-                s.customerName.toLowerCase().includes(query) || 
-                s.invoiceNumber.toLowerCase().includes(query) ||
-                s.productName.toLowerCase().includes(query)
+                (s.customerName?.toLowerCase() || "").includes(query) || 
+                (s.invoiceNumber?.toLowerCase() || "").includes(query) ||
+                (s.productName?.toLowerCase() || "").includes(query)
             );
         }
 
-        return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return filtered.sort((a, b) => {
+            const timeA = a.date ? new Date(a.date).getTime() : 0;
+            const timeB = b.date ? new Date(b.date).getTime() : 0;
+            return timeB - timeA;
+        });
     }, [sales, currentUser, date, searchQuery]);
     
     const chartData = useMemo(() => {
         const grouped = filteredSales.reduce((acc: any, sale) => {
-            const d = new Date(sale.date);
-            const dateStr = format(d, 'dd/MM');
-            if (!acc[dateStr]) acc[dateStr] = { date: dateStr, ventas: 0 };
-            acc[dateStr].ventas += sale.totalAmount;
+            if (!sale.date) return acc;
+            try {
+                const d = new Date(sale.date);
+                if (isNaN(d.getTime())) return acc;
+                const dateStr = format(d, 'dd/MM');
+                if (!acc[dateStr]) acc[dateStr] = { date: dateStr, ventas: 0 };
+                acc[dateStr].ventas += (Number(sale.totalAmount) || 0);
+            } catch (e) {
+                // ignore invalid dates
+            }
             return acc;
         }, {});
         
@@ -134,8 +144,8 @@ export default function SalesPage() {
     
     const calculateTotals = (salesData: Sale[]) => {
         return salesData.reduce((acc, sale) => {
-            acc.totalAmount += sale.totalAmount;
-            acc.totalCommission += sale.commissionAmount || 0;
+            acc.totalAmount += (Number(sale.totalAmount) || 0);
+            acc.totalCommission += (Number(sale.commissionAmount) || 0);
             return acc;
         }, { totalAmount: 0, totalCommission: 0 });
     };
