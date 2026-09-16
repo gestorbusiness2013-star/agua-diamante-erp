@@ -171,7 +171,7 @@ export default function VendedoresPage() {
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-medium">{s.name || 'Usuario'}</span>
-                                                <span className="text-[10px] text-muted-foreground">Ticket prom: {formatCurrency(s.ticketPromedio)}</span>
+                                                <span className="text-[10px] text-muted-foreground">Venta prom: {formatCurrency(s.ticketPromedio)}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right">
