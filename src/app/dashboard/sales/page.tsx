@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, PackageCheck, AlertTriangle, DollarSign, Calendar as CalendarIcon, TrendingUp } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { MoreHorizontal, PlusCircle, PackageCheck, AlertTriangle, DollarSign, Calendar as CalendarIcon, TrendingUp, Search, ShoppingCart, Activity } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +66,7 @@ export default function SalesPage() {
     const [alertDialog, setAlertDialog] = useState<{ open: boolean; type: 'dispatch' | 'cancel' | 'collect'; sale: Sale | null }>({ open: false, type: 'dispatch', sale: null });
     const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
     const [date, setDate] = useState<DateRange | undefined>();
+    const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
         setIsClient(true);
@@ -95,8 +98,34 @@ export default function SalesPage() {
             filtered = filtered.filter(s => s.user === currentUser.name);
         }
 
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(s => 
+                s.customerName.toLowerCase().includes(query) || 
+                s.invoiceNumber.toLowerCase().includes(query) ||
+                s.productName.toLowerCase().includes(query)
+            );
+        }
+
         return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [sales, currentUser, date]);
+    }, [sales, currentUser, date, searchQuery]);
+    
+    const chartData = useMemo(() => {
+        const grouped = filteredSales.reduce((acc: any, sale) => {
+            const d = new Date(sale.date);
+            const dateStr = format(d, 'dd/MM');
+            if (!acc[dateStr]) acc[dateStr] = { date: dateStr, ventas: 0 };
+            acc[dateStr].ventas += sale.totalAmount;
+            return acc;
+        }, {});
+        
+        // Convert to array and sort chronologically based on the object keys or just keep as sorted by the date object.
+        // The dates are coming in sorted order from filteredSales usually, but we should sort just in case.
+        return Object.values(grouped).sort((a: any, b: any) => {
+            // This is a naive sort, assumes same year/month structure for short ranges.
+            return a.date.localeCompare(b.date);
+        });
+    }, [filteredSales]);
     
     const pendingSales = useMemo(() => filteredSales.filter(s => s.status === 'Pendiente'), [filteredSales]);
     const dispatchedSales = useMemo(() => filteredSales.filter(s => s.status === 'Despachado' || s.status === 'Pagado'), [filteredSales]);
@@ -343,31 +372,127 @@ export default function SalesPage() {
         </Card>
     );
 
-    return (
-        <>
-            <Tabs defaultValue="pending">
-                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-                    <div>
-                        <h2 className="text-3xl font-bold tracking-tight font-headline">Órdenes de Venta</h2>
-                        <p className="text-muted-foreground">Crea, filtra y gestiona las órdenes de venta.</p>
-                    </div>
-                     <div className="flex items-center gap-2 self-start sm:self-center">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button id="date" variant={"outline"} className={cn("w-[260px] justify-start text-left font-normal",!date && "text-muted-foreground")}>
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {date?.from ? (date.to ? (<>{format(date.from, "PPP", { locale: es })} - {format(date.to, "PPP", { locale: es })}</>) : (format(date.from, "PPP", { locale: es }))) : (<span>Seleccione un rango</span>)}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="end">
-                                <Calendar initialFocus mode="range" defaultMonth={date?.from} selected={date} onSelect={setDate} numberOfMonths={2} locale={es}/>
-                            </PopoverContent>
-                        </Popover>
-                        <Button onClick={handleOpenCreateDialog}><PlusCircle className="mr-2 h-4 w-4"/>Crear Orden</Button>
-                    </div>
-                </div>
+    const totalFilteredSalesAmount = calculateTotals(filteredSales).totalAmount;
+    const totalFilteredCommissions = calculateTotals(filteredSales).totalCommission;
 
-                <TabsList className="grid w-full grid-cols-4">
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold tracking-tight font-headline flex items-center gap-2">
+                        Órdenes de Venta
+                    </h2>
+                    <p className="text-muted-foreground">Analiza el rendimiento y gestiona las órdenes.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button id="date" variant={"outline"} className={cn("w-[260px] justify-start text-left font-normal",!date && "text-muted-foreground")}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {date?.from ? (date.to ? (<>{format(date.from, "PPP", { locale: es })} - {format(date.to, "PPP", { locale: es })}</>) : (format(date.from, "PPP", { locale: es }))) : (<span>Seleccione un rango</span>)}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                            <Calendar initialFocus mode="range" defaultMonth={date?.from} selected={date} onSelect={setDate} numberOfMonths={2} locale={es}/>
+                        </PopoverContent>
+                    </Popover>
+                    <Button onClick={handleOpenCreateDialog}><PlusCircle className="mr-2 h-4 w-4"/>Crear Orden</Button>
+                </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Ventas Totales</CardTitle>
+                        <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatCurrency(totalFilteredSalesAmount)}</div>
+                        <p className="text-xs text-muted-foreground">{filteredSales.length} órdenes en total</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Comisiones Generadas</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-emerald-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-emerald-600">{formatCurrency(totalFilteredCommissions)}</div>
+                        <p className="text-xs text-muted-foreground">Rendimiento del equipo</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Órdenes Pendientes</CardTitle>
+                        <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-yellow-600">{pendingSales.length}</div>
+                        <p className="text-xs text-muted-foreground">Requieren despacho</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Por Cobrar</CardTitle>
+                        <DollarSign className="h-4 w-4 text-orange-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-orange-600">{consignmentSales.length}</div>
+                        <p className="text-xs text-muted-foreground">Consignaciones activas</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {chartData.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Tendencia de Ventas</CardTitle>
+                        <CardDescription>Volumen de ventas en el período seleccionado</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="h-[250px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorVentas" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.4} />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888888' }} dy={10} />
+                                    <YAxis 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tickFormatter={(value) => `$${value}`}
+                                        tick={{ fontSize: 12, fill: '#888888' }}
+                                    />
+                                    <RechartsTooltip 
+                                        formatter={(value: number) => [formatCurrency(value), "Ventas"]}
+                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    />
+                                    <Area type="monotone" dataKey="ventas" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorVentas)" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="relative w-full md:w-96">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Buscar por cliente, factura o producto..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9"
+                    />
+                </div>
+            </div>
+
+            <Tabs defaultValue="pending">
+                <TabsList className="grid w-full grid-cols-4 mb-4">
                     <TabsTrigger value="pending">Pendientes</TabsTrigger>
                     <TabsTrigger value="consignment">Por Cobrar</TabsTrigger>
                     <TabsTrigger value="dispatched">Despachadas/Pagas</TabsTrigger>
@@ -417,6 +542,6 @@ export default function SalesPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </>
+        </div>
     );
 }
