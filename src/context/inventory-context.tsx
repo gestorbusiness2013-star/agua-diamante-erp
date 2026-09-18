@@ -50,7 +50,9 @@ interface InventoryContextType {
     deleteRecipeAndProduct: (product: FinishedProduct) => Promise<void>;
 
     warehouses: Warehouse[];
-    transferProduct: (values: TransferFormValues, currentUser: { name: string }) => Promise<boolean>;
+    transferProduct: (values: TransferFormValues, currentUser: { name: string }) => Promise<string | false>;
+    receiveTransfer: (transferId: string, currentUser: { name: string }) => Promise<boolean>;
+    cancelTransfer: (transferId: string, currentUser: { name: string }) => Promise<boolean>;
     saveWarehouse: (values: WarehouseFormValues, isEditMode: boolean, existingWarehouse: Warehouse | null) => Promise<void>;
     deleteWarehouse: (warehouse: Warehouse) => Promise<void>;
 
@@ -391,7 +393,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     const transferProduct = async (values: TransferFormValues, currentUser: { name: string }) => {
         try {
-            await runTransaction(db, async (transaction) => {
+            const transferId = await runTransaction(db, async (transaction) => {
                 const destWarehouseRef = doc(db, 'warehouses', String(values.warehouseId));
                 const destWarehouseDoc = await transaction.get(destWarehouseRef);
                 if (!destWarehouseDoc.exists()) throw new Error("Almacén de destino no encontrado.");
@@ -425,27 +427,101 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                     detailsText = `De ${sourceWarehouseData.name} a ${destWarehouseData.name}`;
                 }
 
-                const newDestStock = [...destWarehouseData.stock];
-                const destStockIndex = newDestStock.findIndex(s => s.productName === values.productName);
-                if (destStockIndex > -1) newDestStock[destStockIndex].quantity += values.quantity;
-                else newDestStock.push({ productName: values.productName, quantity: values.quantity });
-
-                transaction.update(destWarehouseRef, { stock: newDestStock });
-                
-                transaction.set(doc(collection(db, 'movements')), {
+                const movementRef = doc(collection(db, 'movements'));
+                transaction.set(movementRef, {
                     date: new Date(),
                     productName: values.productName,
                     quantity: values.quantity,
                     type: 'Transferencia',
                     user: currentUser.name,
                     details: detailsText,
-                    status: 'Completado'
+                    status: 'Pendiente',
+                    sourceId: values.sourceId,
+                    destWarehouseId: values.warehouseId,
+                    driverName: values.driverName || '',
+                    vehiclePlate: values.vehiclePlate || ''
                 });
+
+                return movementRef.id;
             });
-            toast({ title: "Transferencia Exitosa" });
-            return true;
+            toast({ title: "Transferencia En Tránsito", description: "Se ha generado la nota con QR para la recepción." });
+            return transferId;
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error.message });
+            return false;
+        }
+    };
+    
+    const receiveTransfer = async (transferId: string, currentUser: { name: string }) => {
+        try {
+            await runTransaction(db, async (transaction) => {
+                const movementRef = doc(db, 'movements', transferId);
+                const movementDoc = await transaction.get(movementRef);
+                if (!movementDoc.exists()) throw new Error("Transferencia no encontrada.");
+                
+                const movementData = movementDoc.data();
+                if (movementData.status !== 'Pendiente') throw new Error("Esta transferencia ya fue procesada.");
+
+                const destWarehouseRef = doc(db, 'warehouses', movementData.destWarehouseId);
+                const destWarehouseDoc = await transaction.get(destWarehouseRef);
+                if (!destWarehouseDoc.exists()) throw new Error("Almacén de destino no encontrado.");
+                
+                const destWarehouseData = destWarehouseDoc.data() as Warehouse;
+                const newDestStock = [...destWarehouseData.stock];
+                const destStockIndex = newDestStock.findIndex(s => s.productName === movementData.productName);
+                
+                if (destStockIndex > -1) newDestStock[destStockIndex].quantity += movementData.quantity;
+                else newDestStock.push({ productName: movementData.productName, quantity: movementData.quantity });
+
+                transaction.update(destWarehouseRef, { stock: newDestStock });
+                transaction.update(movementRef, { status: 'Completado', receivedBy: currentUser.name, receivedAt: new Date() });
+            });
+            toast({ title: "Recepción Exitosa", description: "El stock ha sido sumado al almacén." });
+            return true;
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error al recibir', description: error.message });
+            return false;
+        }
+    };
+
+    const cancelTransfer = async (transferId: string, currentUser: { name: string }) => {
+        try {
+            await runTransaction(db, async (transaction) => {
+                const movementRef = doc(db, 'movements', transferId);
+                const movementDoc = await transaction.get(movementRef);
+                if (!movementDoc.exists()) throw new Error("Transferencia no encontrada.");
+                
+                const movementData = movementDoc.data();
+                if (movementData.status !== 'Pendiente') throw new Error("Esta transferencia ya fue procesada.");
+
+                // Revert stock to source
+                if (movementData.sourceId === 'factory') {
+                    const productInFactory = finishedProducts.find(p => p.name === movementData.productName);
+                    if (!productInFactory) throw new Error("Producto no encontrado en fábrica.");
+                    const factoryProductRef = doc(db, 'finishedProducts', productInFactory.id);
+                    transaction.update(factoryProductRef, { quantity: productInFactory.quantity + movementData.quantity });
+                } else {
+                    const sourceWarehouseRef = doc(db, 'warehouses', movementData.sourceId);
+                    const sourceWarehouseDoc = await transaction.get(sourceWarehouseRef);
+                    if (sourceWarehouseDoc.exists()) {
+                        const sourceWarehouseData = sourceWarehouseDoc.data() as Warehouse;
+                        const sourceStock = [...sourceWarehouseData.stock];
+                        const sourceIndex = sourceStock.findIndex(s => s.productName === movementData.productName);
+                        if (sourceIndex > -1) {
+                            sourceStock[sourceIndex].quantity += movementData.quantity;
+                        } else {
+                            sourceStock.push({ productName: movementData.productName, quantity: movementData.quantity });
+                        }
+                        transaction.update(sourceWarehouseRef, { stock: sourceStock });
+                    }
+                }
+                
+                transaction.update(movementRef, { status: 'Cancelado', cancelledBy: currentUser.name, cancelledAt: new Date() });
+            });
+            toast({ title: "Transferencia Cancelada", description: "El stock ha regresado al origen." });
+            return true;
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error al cancelar', description: error.message });
             return false;
         }
     };
@@ -969,7 +1045,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     const value: InventoryContextType = {
         loading, errorMessage, inventoryItems, addInventoryItem, updateInventoryItem, deleteInventoryItem, updateMultipleInventoryItems,
-        finishedProducts, fabricateProduct, recipes, saveRecipeAndProduct, deleteRecipeAndProduct, warehouses, transferProduct, saveWarehouse, deleteWarehouse,
+        finishedProducts, fabricateProduct, recipes, saveRecipeAndProduct, deleteRecipeAndProduct, warehouses, transferProduct, receiveTransfer, cancelTransfer, saveWarehouse, deleteWarehouse,
         movements, sales, createSaleOrder, dispatchSaleOrder, cancelSaleOrder, collectConsignmentPayment, updateSale, customers, addCustomer, updateCustomer, deleteCustomer,
         routes, saveRoute, deleteRoute, marketProducts, saveMarketProduct, deleteMarketProduct, expenses, addExpense, updateExpense, deleteExpense, employees, addEmployee, updateEmployee, deleteEmployee,
         users, createUser, updateUser, deleteUser, updateUserLocation, suppliers, addSupplier, updateSupplier, deleteSupplier, purchaseOrders, savePurchaseOrder, receivePurchaseOrder, cancelPurchaseOrder,

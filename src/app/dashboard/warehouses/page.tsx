@@ -22,6 +22,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PlusCircle, Truck, Edit, Trash2, ShoppingBag, Send } from "lucide-react";
 import { WarehouseForm, type WarehouseFormValues } from "@/components/warehouse-form";
 import { TransferForm, type TransferFormValues } from "@/components/transfer-form";
+import QRCode from 'qrcode';
+import { QrScanner } from "@/components/qr-scanner";
 import { SaleForm, type SaleFormValues } from "@/components/sale-form";
 import { StockRequestForm, type StockRequestFormValues } from "@/components/stock-request-form";
 import { useToast } from "@/hooks/use-toast";
@@ -104,7 +106,7 @@ export default function WarehousesPage() {
         }
     };
     
-    const generateDeliveryNotePDF = async (data: TransferFormValues) => {
+    const generateDeliveryNotePDF = async (data: TransferFormValues, transferId: string) => {
         const { default: jsPDF } = await import('jspdf');
         await import('jspdf-autotable');
         
@@ -114,19 +116,33 @@ export default function WarehousesPage() {
         const margin = 14;
         const halfPage = pageHeight / 2;
 
+        let qrDataUrl = '';
+        try {
+            qrDataUrl = await QRCode.toDataURL(transferId, { margin: 1 });
+        } catch (e) {
+            console.error("QR Code Error:", e);
+        }
+
         const drawContent = (yOffset: number, isCopy: boolean) => {
-            const warehouseName = warehouses.find(w => w.id === data.warehouseId)?.name || 'N/A';
+            const warehouseName = warehouses.find(w => String(w.id) === data.warehouseId)?.name || 'N/A';
+            const sourceName = data.sourceId === 'factory' ? 'Fábrica' : (warehouses.find(w => String(w.id) === data.sourceId)?.name || 'N/A');
             const transferDate = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
 
             doc.setFontSize(20);
             doc.text("Nota de Entrega", margin, yOffset + 8);
             doc.setFontSize(11);
             doc.text(`Fecha: ${transferDate}`, pageWidth - margin, yOffset + 8, { align: 'right' });
-            doc.text(`Almacén de Destino: ${warehouseName}`, margin, yOffset + 16);
-            doc.text(`Chófer: ${data.driverName}`, margin, yOffset + 24);
-            doc.text(`Cédula: ${data.driverId}`, margin, yOffset + 32);
-            doc.text(`Vehículo: ${data.vehicleBrand}`, pageWidth / 2, yOffset + 24);
-            doc.text(`Placa: ${data.vehiclePlate}`, pageWidth / 2, yOffset + 32);
+            doc.text(`Origen: ${sourceName}`, margin, yOffset + 16);
+            doc.text(`Destino: ${warehouseName}`, margin, yOffset + 24);
+            doc.text(`Chófer: ${data.driverName} (${data.driverId})`, margin, yOffset + 32);
+            doc.text(`Vehículo: ${data.vehicleBrand} (${data.vehiclePlate})`, pageWidth / 2, yOffset + 32);
+
+            if (qrDataUrl) {
+                doc.addImage(qrDataUrl, 'PNG', pageWidth - margin - 25, yOffset + 12, 25, 25);
+                doc.setFontSize(7);
+                doc.text("Escanea para recibir", pageWidth - margin - 12.5, yOffset + 39, { align: 'center' });
+                doc.text(`CÓD: ${transferId}`, pageWidth - margin - 12.5, yOffset + 43, { align: 'center' });
+            }
 
             doc.autoTable({
                 startY: yOffset + 40,
@@ -172,9 +188,9 @@ export default function WarehousesPage() {
     
     const handleTransferSubmit = async (values: TransferFormValues) => {
         if (!currentUser) return;
-        const transferSuccess = await transferProduct(values, currentUser);
-        if (transferSuccess) {
-            await generateDeliveryNotePDF(values);
+        const transferId = await transferProduct(values, currentUser);
+        if (transferId) {
+            await generateDeliveryNotePDF(values, transferId);
         }
         setTransferDialogOpen(false);
     };
@@ -189,6 +205,12 @@ export default function WarehousesPage() {
         if (!currentUser) return;
         await createStockRequest(values, currentUser);
         setRequestDialogOpen(false);
+    };
+
+    const handleScanSuccess = async (decodedText: string) => {
+        if (!currentUser) return;
+        setScanDialogOpen(false);
+        await receiveTransfer(decodedText, currentUser);
     };
 
 
@@ -207,6 +229,9 @@ export default function WarehousesPage() {
                             <Button variant="outline" onClick={() => handleOpenWarehouseDialog()}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Añadir Almacén
+                            </Button>
+                            <Button variant="outline" onClick={() => setScanDialogOpen(true)}>
+                                Escanear Recepción
                             </Button>
                             <Button variant="outline" onClick={() => setRequestDialogOpen(true)}>
                                 <Send className="mr-2 h-4 w-4" />
