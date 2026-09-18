@@ -24,6 +24,7 @@ import {
 import type { FinishedProduct, Warehouse } from '@/lib/inventory-data';
 
 const formSchema = z.object({
+  sourceId: z.string().min(1, 'Seleccione el origen.'),
   productName: z.string().min(1, 'Seleccione un producto.'),
   quantity: z.coerce.number().positive('La cantidad debe ser positiva.'),
   warehouseId: z.string().min(1, 'Seleccione un almacén.'),
@@ -31,6 +32,9 @@ const formSchema = z.object({
   driverId: z.string().min(1, 'La cédula del chófer es requerida.'),
   vehicleBrand: z.string().min(1, 'La marca del vehículo es requerida.'),
   vehiclePlate: z.string().min(1, 'La placa del vehículo es requerida.'),
+}).refine(data => data.sourceId !== data.warehouseId, {
+  message: "El almacén de destino no puede ser igual al de origen.",
+  path: ["warehouseId"]
 });
 
 export type TransferFormValues = z.infer<typeof formSchema>;
@@ -46,6 +50,7 @@ export function TransferForm({ finishedProducts, warehouses, onSubmit, onClose }
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+        sourceId: 'factory',
         productName: '',
         quantity: 1,
         warehouseId: '',
@@ -56,23 +61,52 @@ export function TransferForm({ finishedProducts, warehouses, onSubmit, onClose }
     },
   });
 
+  const selectedSourceId = form.watch('sourceId');
+
+  const availableProducts = selectedSourceId === 'factory' 
+    ? finishedProducts.map(p => ({ id: p.id, name: p.name, quantity: p.quantity }))
+    : (warehouses.find(w => String(w.id) === selectedSourceId)?.stock || []).map(s => ({ id: s.productName, name: s.productName, quantity: s.quantity }));
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2 max-h-[75vh] overflow-y-auto pr-4">
+        <FormField
+          control={form.control}
+          name="sourceId"
+          render={({ field }) => (
+              <FormItem>
+              <FormLabel>Origen de la Transferencia</FormLabel>
+              <Select onValueChange={(val) => { field.onChange(val); form.setValue('productName', ''); }} value={field.value}>
+                  <FormControl>
+                  <SelectTrigger>
+                      <SelectValue placeholder="Seleccione origen" />
+                  </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                      <SelectItem value="factory">Fábrica (Inventario Principal)</SelectItem>
+                      {warehouses.map(w => (
+                          <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>
+                      ))}
+                  </SelectContent>
+              </Select>
+              <FormMessage />
+              </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="productName"
           render={({ field }) => (
               <FormItem>
               <FormLabel>Producto a Transferir</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                   <SelectTrigger>
                       <SelectValue placeholder="Seleccione un producto" />
                   </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                  {finishedProducts.map(product => (
+                  {availableProducts.map(product => (
                       <SelectItem key={product.id} value={product.name}>
                       {product.name} ({new Intl.NumberFormat('es-ES').format(product.quantity)} disp.)
                       </SelectItem>

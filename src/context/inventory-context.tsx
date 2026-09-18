@@ -392,39 +392,53 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const transferProduct = async (values: TransferFormValues, currentUser: { name: string }) => {
         try {
             await runTransaction(db, async (transaction) => {
-                const productInFactory = finishedProducts.find(p => p.name === values.productName);
-                if (!productInFactory) throw new Error(`Producto ${values.productName} no encontrado.`);
+                const destWarehouseRef = doc(db, 'warehouses', String(values.warehouseId));
+                const destWarehouseDoc = await transaction.get(destWarehouseRef);
+                if (!destWarehouseDoc.exists()) throw new Error("Almacén de destino no encontrado.");
+                const destWarehouseData = destWarehouseDoc.data() as Warehouse;
+                let detailsText = '';
 
-                const factoryProductRef = doc(db, 'finishedProducts', productInFactory.id);
-                const warehouseRef = doc(db, 'warehouses', String(values.warehouseId));
+                if (values.sourceId === 'factory') {
+                    const productInFactory = finishedProducts.find(p => p.name === values.productName);
+                    if (!productInFactory) throw new Error(`Producto ${values.productName} no encontrado en fábrica.`);
+                    const factoryProductRef = doc(db, 'finishedProducts', productInFactory.id);
+                    const factoryProductDoc = await transaction.get(factoryProductRef);
+                    if (!factoryProductDoc.exists()) throw new Error("Producto no encontrado en fábrica.");
+                    const factoryProductData = factoryProductDoc.data() as FinishedProduct;
+
+                    if (factoryProductData.quantity < values.quantity) throw new Error("Stock insuficiente en fábrica.");
+                    transaction.update(factoryProductRef, { quantity: factoryProductData.quantity - values.quantity });
+                    detailsText = `De Fábrica a ${destWarehouseData.name}`;
+                } else {
+                    const sourceWarehouseRef = doc(db, 'warehouses', values.sourceId);
+                    const sourceWarehouseDoc = await transaction.get(sourceWarehouseRef);
+                    if (!sourceWarehouseDoc.exists()) throw new Error("Almacén de origen no encontrado.");
+                    const sourceWarehouseData = sourceWarehouseDoc.data() as Warehouse;
+                    
+                    const sourceStock = [...sourceWarehouseData.stock];
+                    const sourceIndex = sourceStock.findIndex(s => s.productName === values.productName);
+                    if (sourceIndex === -1 || sourceStock[sourceIndex].quantity < values.quantity) {
+                        throw new Error("Stock insuficiente en almacén de origen.");
+                    }
+                    sourceStock[sourceIndex].quantity -= values.quantity;
+                    transaction.update(sourceWarehouseRef, { stock: sourceStock });
+                    detailsText = `De ${sourceWarehouseData.name} a ${destWarehouseData.name}`;
+                }
+
+                const newDestStock = [...destWarehouseData.stock];
+                const destStockIndex = newDestStock.findIndex(s => s.productName === values.productName);
+                if (destStockIndex > -1) newDestStock[destStockIndex].quantity += values.quantity;
+                else newDestStock.push({ productName: values.productName, quantity: values.quantity });
+
+                transaction.update(destWarehouseRef, { stock: newDestStock });
                 
-                const [factoryProductDoc, warehouseDoc] = await Promise.all([
-                    transaction.get(factoryProductRef),
-                    transaction.get(warehouseRef)
-                ]);
-                
-                if (!factoryProductDoc.exists()) throw new Error("Producto no encontrado en fábrica.");
-                const factoryProductData = factoryProductDoc.data() as FinishedProduct;
-
-                if (factoryProductData.quantity < values.quantity) throw new Error("Stock insuficiente en fábrica.");
-                if (!warehouseDoc.exists()) throw new Error("Almacén no encontrado.");
-
-                const warehouseData = warehouseDoc.data() as Warehouse;
-                const newStock = [...warehouseData.stock];
-                const stockIndex = newStock.findIndex(s => s.productName === values.productName);
-                
-                if (stockIndex > -1) newStock[stockIndex].quantity += values.quantity;
-                else newStock.push({ productName: values.productName, quantity: values.quantity });
-
-                transaction.update(factoryProductRef, { quantity: factoryProductData.quantity - values.quantity });
-                transaction.update(warehouseRef, { stock: newStock });
                 transaction.set(doc(collection(db, 'movements')), {
                     date: new Date(),
                     productName: values.productName,
                     quantity: values.quantity,
                     type: 'Transferencia',
                     user: currentUser.name,
-                    details: `De Fábrica a ${warehouseData.name}`,
+                    details: detailsText,
                     status: 'Completado'
                 });
             });
