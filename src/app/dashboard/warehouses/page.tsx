@@ -343,7 +343,7 @@ export default function WarehousesPage() {
                                             <div className="text-xs text-muted-foreground mt-2">
                                                 Código: <code className="bg-muted px-1 py-0.5 rounded text-primary">{transfer.id}</code>
                                                 <span className="mx-2">•</span>
-                                                Fecha: {transfer.date.toLocaleDateString('es-ES')}
+                                                Fecha: {transfer.date ? (typeof (transfer.date as any).toDate === 'function' ? (transfer.date as any).toDate().toLocaleDateString('es-ES') : new Date(transfer.date).toLocaleDateString('es-ES')) : 'Fecha N/A'}
                                             </div>
                                         </div>
                                         <div className="flex gap-2 w-full sm:w-auto">
