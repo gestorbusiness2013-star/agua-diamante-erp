@@ -222,7 +222,9 @@ export default function VendedoresPage() {
                                             <div key={sale.id} className="flex justify-between items-center p-3 rounded-lg border">
                                                 <div>
                                                     <p className="font-medium text-sm">{sale.customerName}</p>
-                                                    <p className="text-xs text-muted-foreground">{sale.invoiceNumber} • {format(new Date(sale.date), "dd/MM/yyyy")}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {sale.invoiceNumber} • {sale.date && !isNaN(new Date(sale.date).getTime()) ? format(new Date(sale.date), "dd/MM/yyyy") : 'Fecha N/A'}
+                                                    </p>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="font-bold text-sm">{formatCurrency(sale.totalAmount)}</p>
