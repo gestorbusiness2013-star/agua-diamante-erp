@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -27,11 +28,12 @@ import { Separator } from './ui/separator';
 interface UserFormProps {
   initialData?: User | null;
   isEditMode: boolean;
-  onSubmit: (values: UserFormValues) => void;
+  onSubmit: (values: UserFormValues) => Promise<void> | void;
   onClose: () => void;
 }
 
 export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
@@ -56,17 +58,18 @@ export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFor
 
   const selectedRole = form.watch('role');
 
-  useEffect(() => {
-    if (!isEditMode) {
-      form.setValue('permissions', getDefaultPermissions(selectedRole));
-    } else if (initialData && selectedRole !== initialData.role) {
-      form.setValue('permissions', getDefaultPermissions(selectedRole));
+  const handleFormSubmit = async (values: UserFormValues) => {
+    setIsSubmitting(true);
+    try {
+      await onSubmit(values);
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [selectedRole, isEditMode, initialData, form]);
+  };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4 max-h-[80vh] overflow-y-auto pr-2">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 pt-4 max-h-[80vh] overflow-y-auto pr-2">
         <FormField
           control={form.control}
           name="name"
@@ -99,7 +102,16 @@ export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFor
           render={({ field }) => (
             <FormItem>
               <FormLabel>Rol</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select 
+                onValueChange={(val: any) => {
+                  field.onChange(val);
+                  const perms = getDefaultPermissions(val);
+                  Object.entries(perms).forEach(([k, v]) => {
+                    form.setValue(`permissions.${k}` as any, v);
+                  });
+                }}
+                defaultValue={field.value}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione un rol" />
@@ -150,8 +162,8 @@ export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFor
                   <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-2 hover:bg-muted/60 transition-colors">
                     <FormControl>
                       <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
+                        checked={!!field.value}
+                        onCheckedChange={(checked) => field.onChange(!!checked)}
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
@@ -204,10 +216,13 @@ export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFor
         )}
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button type="submit">{isEditMode ? 'Guardar Cambios' : 'Crear Usuario'}</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isEditMode ? 'Guardar Cambios' : 'Crear Usuario'}
+          </Button>
         </div>
       </form>
     </Form>

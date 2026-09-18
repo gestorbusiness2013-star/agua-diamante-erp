@@ -23,7 +23,7 @@ import type { PurchaseOrder } from '@/lib/purchases-data';
 import { db, firebaseConfig } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch, Timestamp, runTransaction, query, getDoc, onSnapshot, addDoc, where, serverTimestamp } from 'firebase/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signOut, inMemoryPersistence, setPersistence } from 'firebase/auth';
+import { initializeAuth, createUserWithEmailAndPassword, signOut, inMemoryPersistence } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import type { ExpenseFormValues } from '@/components/expense-form';
@@ -713,23 +713,33 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const createUser = async (userData: UserFormValues) => {
         const tempAppName = `temp-app-${Date.now()}`;
         const tempApp = initializeApp(firebaseConfig, tempAppName);
-        const tempAuth = getAuth(tempApp);
+        // Critical: Initialize secondary Auth with in-memory persistence directly to avoid polluting browser session storage
+        const tempAuth = initializeAuth(tempApp, {
+            persistence: inMemoryPersistence,
+        });
 
         try {
-            // Critical: Use in-memory persistence for the secondary app to avoid overwriting the Admin session
-            await setPersistence(tempAuth, inMemoryPersistence);
-
             // 1. Create user in Auth using secondary app
             const userCredential = await createUserWithEmailAndPassword(tempAuth, userData.email, userData.password!);
             const uid = userCredential.user.uid;
 
             // 2. Save profile in Firestore (using primary db instance)
             const { password, confirmPassword, isEditMode, ...profileData } = userData;
-            await setDoc(doc(db, 'users', uid), {
-                ...profileData,
+            
+            // Build cleaned user profile without undefined properties
+            const cleanedProfile: Record<string, any> = {
                 id: uid,
+                name: profileData.name,
+                email: profileData.email,
+                role: profileData.role,
                 permissions: profileData.permissions || getDefaultPermissions(profileData.role),
-            });
+            };
+
+            if (profileData.role === 'Vendedor' && profileData.commissionRate !== undefined && profileData.commissionRate !== null && !isNaN(profileData.commissionRate)) {
+                cleanedProfile.commissionRate = Number(profileData.commissionRate);
+            }
+
+            await setDoc(doc(db, 'users', uid), cleanedProfile);
 
             // 3. Cleanup secondary instance
             await signOut(tempAuth);
@@ -739,9 +749,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         } catch (error: any) {
             console.error("Error creating user:", error);
             let msg = "No se pudo crear el usuario.";
-            if (error.code === 'auth/email-already-in-use') msg = "El correo ya está registrado.";
-            if (error.code === 'auth/weak-password') msg = "La contraseña es muy débil.";
-            toast({ variant: "destructive", title: "Error", description: msg });
+            if (error?.code === 'auth/email-already-in-use') msg = "El correo ya está registrado.";
+            if (error?.code === 'auth/weak-password') msg = "La contraseña es muy débil.";
+            if (error?.message && !error?.code) msg += ` (${error.message})`;
+            toast({ variant: "destructive", title: "Error al crear usuario", description: msg });
             
             // Attempt cleanup on failure
             try { await deleteApp(tempApp); } catch(e) {}
@@ -751,10 +762,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const updateUser = async (userToUpdate: User) => {
         try {
             const { id, ...dataToUpdate } = userToUpdate;
-            await updateDoc(doc(db, 'users', id), dataToUpdate as any);
+            const cleanedData: Record<string, any> = {};
+            Object.entries(dataToUpdate).forEach(([k, v]) => {
+                if (v !== undefined) {
+                    cleanedData[k] = v;
+                }
+            });
+            await updateDoc(doc(db, 'users', id), cleanedData);
             toast({ title: "Usuario Actualizado" });
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error" });
+        } catch (error: any) {
+            console.error("Error updating user:", error);
+            toast({ variant: "destructive", title: "Error", description: error?.message || "No se pudo actualizar el usuario." });
         }
     };
     
