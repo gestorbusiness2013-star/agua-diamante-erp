@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Warehouse } from "@/lib/inventory-data";
 import type jsPDF from "jspdf";
 import { useAuth } from "@/context/auth-context";
+import { Badge } from "@/components/ui/badge";
 
 // Extend the jspdf interface to include the `autoTable` method
 declare module 'jspdf' {
@@ -48,6 +49,9 @@ export default function WarehousesPage() {
         transferProduct,
         createSaleOrder,
         createStockRequest,
+        receiveTransfer,
+        cancelTransfer,
+        movements,
     } = useInventory();
     
     const [warehouseDialogOpen, setWarehouseDialogOpen] = useState(false);
@@ -55,11 +59,14 @@ export default function WarehousesPage() {
     const [saleDialogOpen, setSaleDialogOpen] = useState(false);
     const [requestDialogOpen, setRequestDialogOpen] = useState(false);
     const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+    const [scanDialogOpen, setScanDialogOpen] = useState(false);
 
     const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
     const [warehouseToDelete, setWarehouseToDelete] = useState<Warehouse | null>(null);
     const [isEditMode, setIsEditMode] = useState(false);
-    const [selectedStockItem, setSelectedStockItem] = useState<{warehouseId: string, productName: string} | null>(null);
+    const [selectedStockItem, setSelectedStockItem] = useState<{warehouseId: string | number, productName: string} | null>(null);
+
+    const pendingTransfers = movements.filter(m => m.type === 'Transferencia' && m.status === 'Pendiente');
 
     const { currentUser } = useAuth();
 
@@ -307,6 +314,67 @@ export default function WarehousesPage() {
                 </CardContent>
             </Card>
 
+            {pendingTransfers.length > 0 && (
+                <Card className="mt-8 border-yellow-500/20 shadow-md">
+                    <CardHeader className="bg-yellow-500/5 pb-4">
+                        <CardTitle className="text-xl flex items-center text-yellow-700 dark:text-yellow-500">
+                            <Truck className="mr-2 h-5 w-5" />
+                            Transferencias en Tránsito
+                        </CardTitle>
+                        <CardDescription>
+                            Estos productos están en camino a un almacén. Recíbelos ingresando el código manualmente si no puedes escanear el QR.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                        <div className="space-y-4">
+                            {pendingTransfers.map(transfer => {
+                                const sourceName = transfer.sourceId === 'factory' ? 'Fábrica' : (warehouses.find(w => String(w.id) === transfer.sourceId)?.name || 'N/A');
+                                const destName = warehouses.find(w => String(w.id) === transfer.destWarehouseId)?.name || 'N/A';
+                                
+                                return (
+                                    <div key={transfer.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-lg bg-card hover:bg-accent/10 transition-colors">
+                                        <div className="space-y-1 mb-4 sm:mb-0">
+                                            <div className="font-semibold text-lg">{transfer.productName} <Badge variant="secondary" className="ml-2">{new Intl.NumberFormat('es-ES').format(transfer.quantity)} unid.</Badge></div>
+                                            <div className="text-sm text-muted-foreground flex items-center">
+                                                <span className="font-medium">De:</span> <Badge variant="outline" className="mx-1">{sourceName}</Badge> 
+                                                <span className="mx-1 text-muted-foreground/50">➔</span> 
+                                                <span className="font-medium">A:</span> <Badge variant="outline" className="ml-1">{destName}</Badge>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground mt-2">
+                                                Código: <code className="bg-muted px-1 py-0.5 rounded text-primary">{transfer.id}</code>
+                                                <span className="mx-2">•</span>
+                                                Fecha: {transfer.date.toDate().toLocaleDateString('es-ES')}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 w-full sm:w-auto">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                className="flex-1 sm:flex-none text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 border-red-200 dark:border-red-900"
+                                                onClick={async () => {
+                                                    if(currentUser) await cancelTransfer(transfer.id!, currentUser);
+                                                }}
+                                            >
+                                                Cancelar Envío
+                                            </Button>
+                                            <Button 
+                                                size="sm" 
+                                                className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white"
+                                                onClick={async () => {
+                                                    if(currentUser) await receiveTransfer(transfer.id!, currentUser);
+                                                }}
+                                            >
+                                                Recibir Manual
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
             <Dialog open={warehouseDialogOpen} onOpenChange={setWarehouseDialogOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
@@ -356,18 +424,36 @@ export default function WarehousesPage() {
             </Dialog>
             
             <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Solicitar Stock a Fábrica</DialogTitle>
+                        <DialogTitle>Solicitar Stock</DialogTitle>
                         <DialogDescription>
-                           Completa los detalles de los productos que necesitas reponer en tu almacén.
+                            Envía una solicitud a la fábrica para reponer inventario en tu almacén.
                         </DialogDescription>
                     </DialogHeader>
                     <StockRequestForm
+                        finishedProducts={finishedProducts}
                         warehouses={warehouses}
                         onSubmit={handleRequestSubmit}
                         onClose={() => setRequestDialogOpen(false)}
                     />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={scanDialogOpen} onOpenChange={setScanDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Escanear Nota de Entrega</DialogTitle>
+                        <DialogDescription>
+                            Apunta con la cámara al código QR de la nota de entrega para registrar la recepción del inventario.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {scanDialogOpen && (
+                        <QrScanner
+                            onScanSuccess={handleScanSuccess}
+                            onCancel={() => setScanDialogOpen(false)}
+                        />
+                    )}
                 </DialogContent>
             </Dialog>
 
