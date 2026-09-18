@@ -99,7 +99,7 @@ export function TransferForm({ finishedProducts, warehouses, onSubmit, onClose }
           render={({ field }) => (
               <FormItem>
               <FormLabel>Producto a Transferir</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || undefined}>
+              <Select key={selectedSourceId} onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                   <SelectTrigger>
                       <SelectValue placeholder="Seleccione un producto" />
