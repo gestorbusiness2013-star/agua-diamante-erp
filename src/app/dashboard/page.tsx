@@ -56,9 +56,11 @@ export default function DashboardPage() {
     sixMonthsAgo.setDate(1);
     sixMonthsAgo.setHours(0, 0, 0, 0);
 
-    const productionMovements = movements.filter(
-        m => m.type === 'Fabricación' && m.date >= sixMonthsAgo
-    );
+    const productionMovements = movements.filter(m => {
+        if (m.type !== 'Fabricación' || !m.date) return false;
+        const d = new Date(m.date);
+        return !isNaN(d.getTime()) && d >= sixMonthsAgo;
+    });
 
     const monthlyTotals = Array.from({ length: 6 }).map((_, i) => {
         const date = subMonths(new Date(), 5 - i); // Iterate from 5 months ago to now
@@ -71,8 +73,11 @@ export default function DashboardPage() {
     });
 
     productionMovements.forEach(m => {
-        const year = getYear(m.date);
-        const month = getMonth(m.date);
+        if (!m.date) return;
+        const d = new Date(m.date);
+        if (isNaN(d.getTime())) return;
+        const year = getYear(d);
+        const month = getMonth(d);
         const monthData = monthlyTotals.find(d => d.year === year && d.month === month);
         if (monthData) {
             monthData.produced += m.quantity;
