@@ -47,8 +47,8 @@ export default function SellerMap({ sellers }: SellerMapProps) {
         <MapContainer center={center} zoom={9} style={{ height: '400px', width: '100%' }} className="rounded-lg">
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap contributors' />
             {sellersWithLocation.map(seller => {
-                const routePoints = seller.locationHistory
-                    ?.map(p => ({ lat: p?.lat, lng: p?.lng }))
+                const routePoints = (seller.locationHistory || [])
+                    .map(p => ({ lat: p?.lat, lng: p?.lng }))
                     .filter((p): p is { lat: number, lng: number } => 
                         p && 
                         typeof p.lat === 'number' && 
@@ -56,7 +56,7 @@ export default function SellerMap({ sellers }: SellerMapProps) {
                         !isNaN(p.lat) && 
                         !isNaN(p.lng)
                     )
-                    .map(p => [p.lat, p.lng] as [number, number]) || [];
+                    .map(p => [p.lat, p.lng] as [number, number]);
                 
                 const routeColor = generateColor(seller.id);
 
