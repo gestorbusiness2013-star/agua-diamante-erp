@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PlusCircle, Truck, Edit, Trash2, ShoppingBag, Send } from "lucide-react";
+import { PlusCircle, Truck, Edit, Trash2, ShoppingBag, Send, ClipboardList, Clock, CheckCircle2, XCircle, PackageCheck } from "lucide-react";
 import { WarehouseForm, type WarehouseFormValues } from "@/components/warehouse-form";
 import { TransferForm, type TransferFormValues } from "@/components/transfer-form";
 import { QrScanner } from "@/components/qr-scanner";
@@ -52,6 +52,7 @@ export default function WarehousesPage() {
         receiveTransfer,
         cancelTransfer,
         movements,
+        stockRequests,
     } = useInventory();
     
     const [warehouseDialogOpen, setWarehouseDialogOpen] = useState(false);
@@ -367,6 +368,55 @@ export default function WarehousesPage() {
                                                 Recibir Manual
                                             </Button>
                                         </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {stockRequests.length > 0 && (
+                <Card className="mt-8 border-blue-500/20 shadow-md">
+                    <CardHeader className="bg-blue-500/5 pb-4">
+                        <CardTitle className="text-xl flex items-center text-blue-700 dark:text-blue-400">
+                            <ClipboardList className="mr-2 h-5 w-5" />
+                            Mis Solicitudes de Stock
+                        </CardTitle>
+                        <CardDescription>
+                            Estado de tus solicitudes de reposición de inventario a la fábrica.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                        <div className="space-y-3">
+                            {stockRequests.map(request => {
+                                const statusConfig: Record<string, { icon: React.ReactNode, color: string, bg: string }> = {
+                                    'Pendiente': { icon: <Clock className="h-4 w-4" />, color: 'text-yellow-700 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800' },
+                                    'Aprobado': { icon: <CheckCircle2 className="h-4 w-4" />, color: 'text-green-700 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800' },
+                                    'Rechazado': { icon: <XCircle className="h-4 w-4" />, color: 'text-red-700 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/30 border-red-200 dark:border-red-800' },
+                                    'Completado': { icon: <PackageCheck className="h-4 w-4" />, color: 'text-blue-700 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' },
+                                };
+                                const config = statusConfig[request.status] || statusConfig['Pendiente'];
+                                const requestDate = request.date 
+                                    ? (typeof (request.date as any).toDate === 'function' 
+                                        ? (request.date as any).toDate().toLocaleDateString('es-ES') 
+                                        : new Date(request.date).toLocaleDateString('es-ES')) 
+                                    : 'Fecha N/A';
+
+                                return (
+                                    <div key={request.id} className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-lg ${config.bg} transition-colors`}>
+                                        <div className="space-y-1 mb-2 sm:mb-0">
+                                            <div className="font-semibold text-lg">{request.productName} <Badge variant="secondary" className="ml-2">{new Intl.NumberFormat('es-ES').format(request.quantity)} unid.</Badge></div>
+                                            <div className="text-sm text-muted-foreground">
+                                                Almacén: <Badge variant="outline" className="mx-1">{request.warehouseName}</Badge>
+                                                <span className="mx-1">•</span> Solicitado por: {request.requestedBy}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">Fecha: {requestDate}</div>
+                                        </div>
+                                        <Badge variant="outline" className={`${config.color} flex items-center gap-1 px-3 py-1 text-sm`}>
+                                            {config.icon}
+                                            {request.status}
+                                        </Badge>
                                     </div>
                                 );
                             })}
