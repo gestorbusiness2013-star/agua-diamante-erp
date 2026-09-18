@@ -22,7 +22,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PlusCircle, Truck, Edit, Trash2, ShoppingBag, Send } from "lucide-react";
 import { WarehouseForm, type WarehouseFormValues } from "@/components/warehouse-form";
 import { TransferForm, type TransferFormValues } from "@/components/transfer-form";
-import QRCode from 'qrcode';
 import { QrScanner } from "@/components/qr-scanner";
 import { SaleForm, type SaleFormValues } from "@/components/sale-form";
 import { StockRequestForm, type StockRequestFormValues } from "@/components/stock-request-form";
@@ -109,6 +108,7 @@ export default function WarehousesPage() {
     const generateDeliveryNotePDF = async (data: TransferFormValues, transferId: string) => {
         const { default: jsPDF } = await import('jspdf');
         await import('jspdf-autotable');
+        const QRCode = (await import('qrcode')).default;
         
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();

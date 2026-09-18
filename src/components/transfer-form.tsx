@@ -76,7 +76,7 @@ export function TransferForm({ finishedProducts, warehouses, onSubmit, onClose }
           render={({ field }) => (
               <FormItem>
               <FormLabel>Origen de la Transferencia</FormLabel>
-              <Select onValueChange={(val) => { field.onChange(val); form.setValue('productName', ''); }} value={field.value}>
+              <Select onValueChange={(val) => { field.onChange(val); form.setValue('productName', ''); }} value={field.value || undefined}>
                   <FormControl>
                   <SelectTrigger>
                       <SelectValue placeholder="Seleccione origen" />
@@ -99,7 +99,7 @@ export function TransferForm({ finishedProducts, warehouses, onSubmit, onClose }
           render={({ field }) => (
               <FormItem>
               <FormLabel>Producto a Transferir</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                   <SelectTrigger>
                       <SelectValue placeholder="Seleccione un producto" />
@@ -136,7 +136,7 @@ export function TransferForm({ finishedProducts, warehouses, onSubmit, onClose }
           render={({ field }) => (
               <FormItem>
               <FormLabel>Almacén de Destino</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                   <SelectTrigger>
                       <SelectValue placeholder="Seleccione un almacén" />
