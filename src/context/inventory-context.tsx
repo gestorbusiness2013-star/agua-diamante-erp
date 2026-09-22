@@ -15,6 +15,7 @@ import type { Expense } from '@/lib/expenses-data';
 import type { Employee } from '@/lib/payroll-data';
 import type { Movement } from '@/lib/movements-data';
 import type { Sale } from '@/lib/sales-data';
+import { getSaleItems } from '@/lib/sales-data';
 import { type User, type UserFormValues, getDefaultPermissions } from '@/lib/users-data';
 import type { ProductionLine } from '@/lib/data';
 import type { Supplier } from '@/lib/suppliers-data';
@@ -532,7 +533,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             if (!warehouse) throw new Error("Almacén no encontrado.");
     
             const now = new Date();
-            const totalAmount = values.quantity * values.unitPrice;
+            const saleItems = values.items.map(item => ({
+                productName: item.productName,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                subtotal: item.quantity * item.unitPrice,
+            }));
+            const totalAmount = saleItems.reduce((sum, item) => sum + item.subtotal, 0);
             let commissionAmount: number | null = null;
             if (currentUser.role === 'Vendedor' && currentUser.commissionRate) {
                 commissionAmount = totalAmount * (currentUser.commissionRate / 100);
@@ -542,7 +549,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             const invoiceNumber = `ORD-${newSaleRef.id.substring(0, 5).toUpperCase()}`;
     
             await setDoc(newSaleRef, {
-                ...values,
+                warehouseId: values.warehouseId,
+                customerId: values.customerId,
+                customerName: values.customerName,
+                description: values.description || '',
+                saleType: values.saleType,
+                paymentMethod: values.paymentMethod,
+                documentType: values.documentType,
+                items: saleItems,
                 date: now,
                 warehouseName: warehouse.name,
                 totalAmount,
@@ -560,6 +574,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     
     const dispatchSaleOrder = async (saleToDispatch: Sale, currentUser: { name: string }) => {
          try {
+            const saleItems = getSaleItems(saleToDispatch);
             let dispatchedSaleData: Sale | null = null;
             await runTransaction(db, async (transaction) => {
                 const warehouseRef = doc(db, 'warehouses', String(saleToDispatch.warehouseId));
@@ -570,12 +585,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 if (!saleDoc.exists() || saleDoc.data().status !== 'Pendiente') throw new Error("Orden no pendiente.");
                 
                 const warehouseData = warehouseDoc.data() as Warehouse;
-                const productStock = warehouseData.stock.find(s => s.productName === saleToDispatch.productName);
-                if (!productStock || productStock.quantity < saleToDispatch.quantity) throw new Error("Stock insuficiente.");
-                
-                const newStock = warehouseData.stock.map(s => 
-                    s.productName === saleToDispatch.productName ? { ...s, quantity: s.quantity - saleToDispatch.quantity } : s
-                ).filter(s => s.quantity > 0);
+                let newStock = [...warehouseData.stock];
+
+                // Validate and deduct stock for each item
+                for (const item of saleItems) {
+                    const productStock = newStock.find(s => s.productName === item.productName);
+                    if (!productStock || productStock.quantity < item.quantity) {
+                        throw new Error(`Stock insuficiente de ${item.productName}.`);
+                    }
+                }
+                for (const item of saleItems) {
+                    newStock = newStock.map(s => 
+                        s.productName === item.productName ? { ...s, quantity: s.quantity - item.quantity } : s
+                    );
+                }
+                newStock = newStock.filter(s => s.quantity > 0);
                 
                 const newInvoiceNumber = saleToDispatch.invoiceNumber.replace('ORD-', 'INV-');
                 const newStatus = saleToDispatch.saleType === 'Consignación' ? 'Por Cobrar' : 'Despachado';
@@ -584,10 +608,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
                 transaction.update(warehouseRef, { stock: newStock });
                 transaction.update(saleRef, { status: newStatus, invoiceNumber: newInvoiceNumber });
+
+                const productSummary = saleItems.map(i => `${i.productName} x${i.quantity}`).join(', ');
                 transaction.set(doc(collection(db, 'movements')), {
                     date: new Date(),
-                    productName: saleToDispatch.productName,
-                    quantity: saleToDispatch.quantity,
+                    productName: productSummary,
+                    quantity: saleItems.reduce((sum: number, i) => sum + i.quantity, 0),
                     type: 'Venta',
                     user: currentUser.name,
                     details: `Vendido a ${saleToDispatch.customerName} desde ${warehouseData.name}`,
@@ -614,15 +640,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     const cancelSaleOrder = async (sale: Sale, currentUser: { name: string }) => {
         try {
+            const saleItems = getSaleItems(sale);
             await runTransaction(db, async (transaction) => {
                 const saleRef = doc(db, 'sales', sale.id);
                 const wasDispatched = ['Despachado', 'Por Cobrar', 'Pagado'].includes(sale.status);
 
                 transaction.update(saleRef, { status: 'Cancelado' });
+
+                const productSummary = saleItems.map(i => `${i.productName} x${i.quantity}`).join(', ');
                 transaction.set(doc(collection(db, 'movements')), {
                     date: new Date(),
-                    productName: sale.productName,
-                    quantity: sale.quantity,
+                    productName: productSummary,
+                    quantity: saleItems.reduce((sum: number, i) => sum + i.quantity, 0),
                     type: 'Anulación de Venta',
                     user: currentUser.name,
                     details: `Anulación de orden ${sale.invoiceNumber}`,
@@ -635,9 +664,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                      const warehouseDoc = await transaction.get(warehouseRef);
                      if (!warehouseDoc.exists()) throw new Error("Almacén no encontrado.");
                      const newStock = [...warehouseDoc.data().stock];
-                     const idx = newStock.findIndex(item => item.productName === sale.productName);
-                     if (idx > -1) newStock[idx].quantity += sale.quantity;
-                     else newStock.push({ productName: sale.productName, quantity: sale.quantity });
+                     for (const item of saleItems) {
+                         const idx = newStock.findIndex(s => s.productName === item.productName);
+                         if (idx > -1) newStock[idx].quantity += item.quantity;
+                         else newStock.push({ productName: item.productName, quantity: item.quantity });
+                     }
                      transaction.update(warehouseRef, { stock: newStock });
                 }
             });

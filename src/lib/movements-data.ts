@@ -9,7 +9,9 @@ export type Movement = {
   user: string;
   details: string;
   reference?: string;
-  status?: 'Completado' | 'Cancelado';
+  status?: 'Pendiente' | 'Completado' | 'Cancelado';
+  sourceId?: string;
+  destWarehouseId?: string;
 };
 
 export const initialMovements: Omit<Movement, 'id'>[] = [

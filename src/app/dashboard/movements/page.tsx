@@ -26,9 +26,10 @@ export default function MovementsPage() {
     }, [movements]);
 
 
-    const getStatusVariant = (status?: 'Completado' | 'Cancelado') => {
+    const getStatusVariant = (status?: 'Pendiente' | 'Completado' | 'Cancelado') => {
         if (status === 'Cancelado') return 'destructive';
         if (status === 'Completado') return 'secondary';
+        if (status === 'Pendiente') return 'outline';
         return 'outline';
     };
 
@@ -95,7 +96,7 @@ export default function MovementsPage() {
                                 </TableCell>
                                 <TableCell>
                                     <Badge variant={getStatusVariant(movement.status)}>
-                                        {movement.status === 'Cancelado' ? 'Cancelado' : 'Completado'}
+                                        {movement.status || 'Completado'}
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="hidden md:table-cell">{movement.user}</TableCell>

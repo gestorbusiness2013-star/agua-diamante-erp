@@ -482,7 +482,6 @@ export default function WarehousesPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <StockRequestForm
-                        finishedProducts={finishedProducts}
                         warehouses={warehouses}
                         onSubmit={handleRequestSubmit}
                         onClose={() => setRequestDialogOpen(false)}

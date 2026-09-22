@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { SaleForm, type SaleFormValues } from "@/components/sale-form";
 import type { Sale } from "@/lib/sales-data";
+import { getSaleItems } from "@/lib/sales-data";
 import { useAuth } from "@/context/auth-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -100,11 +101,13 @@ export default function SalesPage() {
 
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            filtered = filtered.filter(s => 
-                (s.customerName?.toLowerCase() || "").includes(query) || 
-                (s.invoiceNumber?.toLowerCase() || "").includes(query) ||
-                (s.productName?.toLowerCase() || "").includes(query)
-            );
+            filtered = filtered.filter(s => {
+                const matchCustomer = (s.customerName?.toLowerCase() || "").includes(query);
+                const matchInvoice = (s.invoiceNumber?.toLowerCase() || "").includes(query);
+                const items = getSaleItems(s);
+                const matchProduct = items.some(i => i.productName.toLowerCase().includes(query));
+                return matchCustomer || matchInvoice || matchProduct;
+            });
         }
 
         return filtered.sort((a, b) => {
@@ -169,8 +172,14 @@ export default function SalesPage() {
     const handleSaleFormSubmit = async (values: SaleFormValues) => {
         if (!currentUser) return;
         if (selectedSale) {
-            const totalAmount = values.unitPrice * selectedSale.quantity;
-            const updatedSaleData: Sale = { ...selectedSale, ...values, totalAmount };
+            const saleItems = values.items.map(item => ({
+                productName: item.productName,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                subtotal: item.quantity * item.unitPrice,
+            }));
+            const totalAmount = saleItems.reduce((sum, item) => sum + item.subtotal, 0);
+            const updatedSaleData: Sale = { ...selectedSale, ...values, items: saleItems, totalAmount };
             await updateSale(updatedSaleData);
         } else {
             await createSaleOrder(values, currentUser);
@@ -207,12 +216,12 @@ export default function SalesPage() {
             (doc as any).autoTable({
                 startY: yOffset + 40,
                 head: [['Producto', 'Cantidad', 'Precio Unit.', 'Total']],
-                body: [[
-                    sale.productName, 
-                    sale.quantity.toLocaleString('es-ES'), 
-                    formatCurrency(sale.unitPrice), 
-                    formatCurrency(sale.totalAmount)
-                ]],
+                body: getSaleItems(sale).map(item => [
+                    item.productName, 
+                    item.quantity.toLocaleString('es-ES'), 
+                    formatCurrency(item.unitPrice), 
+                    formatCurrency(item.subtotal)
+                ]),
                 theme: 'grid',
                 headStyles: {
                     fillColor: [255, 255, 255],
@@ -222,7 +231,13 @@ export default function SalesPage() {
                     1: { halign: 'right' },
                     2: { halign: 'right' },
                     3: { halign: 'right' },
-                }
+                },
+                foot: [['', '', 'TOTAL:', formatCurrency(sale.totalAmount)]],
+                footStyles: {
+                    fillColor: [240, 240, 240],
+                    textColor: [0, 0, 0],
+                    fontStyle: 'bold',
+                },
             });
     
             const finalY = (doc as any).lastAutoTable.finalY || (yOffset + 60);
@@ -339,7 +354,26 @@ export default function SalesPage() {
                                                 </Tooltip>
                                             )}
                                         </TableCell>
-                                        <TableCell className="hidden md:table-cell">{sale.productName}</TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            {(() => {
+                                                const items = getSaleItems(sale);
+                                                if (items.length === 1) return items[0].productName;
+                                                return (
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span className="cursor-help underline decoration-dotted">{items.length} productos</span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <ul className="text-xs space-y-1">
+                                                                {items.map((item, idx) => (
+                                                                    <li key={idx}>{item.productName} × {item.quantity}</li>
+                                                                ))}
+                                                            </ul>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                );
+                                            })()}
+                                        </TableCell>
                                         <TableCell className="hidden sm:table-cell text-right font-mono">{formatCurrency(sale.totalAmount)}</TableCell>
                                         <TableCell className="hidden lg:table-cell text-right font-mono text-emerald-500">
                                             {sale.commissionAmount ? formatCurrency(sale.commissionAmount) : <span className="text-muted-foreground">-</span>}

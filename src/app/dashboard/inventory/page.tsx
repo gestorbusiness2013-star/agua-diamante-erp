@@ -126,7 +126,13 @@ export default function InventoryPage() {
             finalStatus = values.quantity <= values.lowStockThreshold ? 'Stock Bajo' : 'En Stock';
         }
         
-        const materialData = { ...values, status: finalStatus, supplierId: values.supplierId || undefined };
+        // Exclude accessKey — never store it in Firestore
+        const { accessKey, ...cleanValues } = values;
+        const materialData = { 
+            ...cleanValues, 
+            status: finalStatus, 
+            supplierId: cleanValues.supplierId === 'none' ? undefined : (cleanValues.supplierId || undefined)
+        };
 
         if(isEditMode && selectedItem) {
             await updateInventoryItem({ 

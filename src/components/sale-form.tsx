@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -23,16 +23,21 @@ import {
 } from '@/components/ui/select';
 import type { Warehouse, WarehouseStockItem } from '@/lib/inventory-data';
 import type { Customer } from '@/lib/customers-data';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Textarea } from './ui/textarea';
 import type { Sale } from '@/lib/sales-data';
+import { PlusCircle, Trash2 } from 'lucide-react';
+
+const saleItemSchema = z.object({
+    productName: z.string().min(1, 'Seleccione un producto.'),
+    quantity: z.coerce.number().positive('Cantidad debe ser positiva.'),
+    unitPrice: z.coerce.number().positive('Precio debe ser positivo.'),
+});
 
 const formSchema = z.object({
   warehouseId: z.string().min(1, 'Seleccione un almacén.'),
-  productName: z.string().min(1, 'Seleccione un producto.'),
-  quantity: z.coerce.number().positive('La cantidad debe ser positiva.'),
-  unitPrice: z.coerce.number().positive('El precio debe ser positivo.'),
+  items: z.array(saleItemSchema).min(1, 'Agrega al menos un producto.'),
   customerId: z.string().min(1, 'Seleccione un cliente.'),
   customerName: z.string().min(1, 'El nombre del cliente es requerido.'),
   description: z.string().optional(),
@@ -55,16 +60,28 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
   const [availableProducts, setAvailableProducts] = useState<WarehouseStockItem[]>([]);
   const isEditMode = !!initialData;
   
+  const getInitialItems = () => {
+      if (!initialData) return [{ productName: '', quantity: 1, unitPrice: 0 }];
+      if (initialData.items && initialData.items.length > 0) {
+          return initialData.items.map(i => ({ productName: i.productName, quantity: i.quantity, unitPrice: i.unitPrice }));
+      }
+      return [{ productName: initialData.productName || '', quantity: initialData.quantity || 1, unitPrice: initialData.unitPrice || 0 }];
+  };
+
   const form = useForm<SaleFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
-        ...initialData,
-        warehouseId: String(initialData.warehouseId), // Ensure it's a string
+        warehouseId: String(initialData.warehouseId),
+        items: getInitialItems(),
+        customerId: String(initialData.customerId),
+        customerName: initialData.customerName,
+        description: initialData.description || '',
+        saleType: initialData.saleType,
+        paymentMethod: initialData.paymentMethod,
+        documentType: initialData.documentType,
     } : {
         warehouseId: '',
-        productName: '',
-        quantity: 1,
-        unitPrice: 0,
+        items: [{ productName: '', quantity: 1, unitPrice: 0 }],
         customerId: '',
         customerName: '',
         description: '',
@@ -74,33 +91,35 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
     },
   });
 
+  const { fields, append, remove } = useFieldArray({
+      control: form.control,
+      name: 'items',
+  });
+
   const selectedWarehouseId = form.watch('warehouseId');
   const selectedCustomerId = form.watch('customerId');
+  const watchedItems = form.watch('items');
+
+  const totalAmount = useMemo(() => {
+      return (watchedItems || []).reduce((sum, item) => {
+          const qty = Number(item.quantity) || 0;
+          const price = Number(item.unitPrice) || 0;
+          return sum + (qty * price);
+      }, 0);
+  }, [watchedItems]);
 
   useEffect(() => {
     if (selectedWarehouseId) {
       const warehouse = warehouses.find(w => String(w.id) === selectedWarehouseId);
       if (warehouse) {
-          const productsInStock = [...warehouse.stock];
-          if (isEditMode && initialData && String(initialData.warehouseId) === selectedWarehouseId) {
-            const productInInitialData = productsInStock.find(p => p.productName === initialData.productName);
-            if (!productInInitialData) {
-              productsInStock.push({ productName: initialData.productName, quantity: initialData.quantity});
-            }
-          }
-          setAvailableProducts(productsInStock);
+          setAvailableProducts([...warehouse.stock]);
       } else {
         setAvailableProducts([]);
-      }
-      
-      if (!isEditMode) {
-        form.setValue('productName', ''); 
       }
     } else {
       setAvailableProducts([]);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedWarehouseId, warehouses, isEditMode, initialData]);
+  }, [selectedWarehouseId, warehouses]);
   
   useEffect(() => {
     if (selectedCustomerId) {
@@ -110,6 +129,8 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
         }
     }
   }, [selectedCustomerId, customers, form]);
+
+  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
   return (
     <Form {...form}>
@@ -141,7 +162,7 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
           )}
         />
         
-        <h4 className="text-sm font-medium pt-4 border-t">Detalles de la Orden</h4>
+        <h4 className="text-sm font-medium pt-4 border-t">Productos</h4>
         <FormField
           control={form.control}
           name="warehouseId"
@@ -149,7 +170,13 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
               <FormItem>
               <FormLabel>Vender desde Almacén</FormLabel>
               <Select 
-                onValueChange={field.onChange}
+                onValueChange={(value) => {
+                    field.onChange(value);
+                    // Reset items when warehouse changes
+                    if (!isEditMode) {
+                        form.setValue('items', [{ productName: '', quantity: 1, unitPrice: 0 }]);
+                    }
+                }}
                 value={field.value}
                 disabled={isEditMode}
               >
@@ -171,58 +198,97 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="productName"
-          render={({ field }) => (
-              <FormItem>
-              <FormLabel>Producto a Vender</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value} disabled={!selectedWarehouseId || isEditMode}>
-                  <FormControl>
-                  <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un producto" />
-                  </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                  {availableProducts.map(product => (
-                      <SelectItem key={product.productName} value={product.productName}>
-                      {product.productName} ({new Intl.NumberFormat('es-ES').format(product.quantity)} disp.)
-                      </SelectItem>
-                  ))}
-                  </SelectContent>
-              </Select>
-              <FormMessage />
-              </FormItem>
-          )}
-        />
-        
-        <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                  <FormItem>
-                  <FormLabel>Cantidad</FormLabel>
-                  <FormControl>
-                      <Input type="number" placeholder="e.g., 10" {...field} disabled={isEditMode}/>
-                  </FormControl>
-                  <FormMessage />
-                  </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="unitPrice"
-              render={({ field }) => (
-                  <FormItem>
-                  <FormLabel>Precio Unit. (USD)</FormLabel>
-                  <FormControl>
-                      <Input type="number" step="0.01" placeholder="e.g., 2.50" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                  </FormItem>
-              )}
-            />
+        {/* Dynamic Items Table */}
+        <div className="space-y-3">
+            {fields.map((field, index) => {
+                const itemSubtotal = (Number(watchedItems?.[index]?.quantity) || 0) * (Number(watchedItems?.[index]?.unitPrice) || 0);
+                return (
+                    <div key={field.id} className="p-3 border rounded-lg bg-muted/30 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-muted-foreground">Producto {index + 1}</span>
+                            {fields.length > 1 && (
+                                <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => remove(index)} disabled={isEditMode}>
+                                    <Trash2 className="h-3 w-3" />
+                                </Button>
+                            )}
+                        </div>
+                        <FormField
+                            control={form.control}
+                            name={`items.${index}.productName`}
+                            render={({ field: itemField }) => (
+                                <FormItem>
+                                    <Select onValueChange={itemField.onChange} value={itemField.value} disabled={!selectedWarehouseId || isEditMode}>
+                                        <FormControl>
+                                            <SelectTrigger className="h-9">
+                                                <SelectValue placeholder="Seleccione producto" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {availableProducts.map(product => (
+                                                <SelectItem key={product.productName} value={product.productName}>
+                                                    {product.productName} ({new Intl.NumberFormat('es-ES').format(product.quantity)} disp.)
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <div className="grid grid-cols-3 gap-2">
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.quantity`}
+                                render={({ field: itemField }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs">Cantidad</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" className="h-9" placeholder="0" {...itemField} disabled={isEditMode} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.unitPrice`}
+                                render={({ field: itemField }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs">Precio USD</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" step="0.01" className="h-9" placeholder="0.00" {...itemField} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div className="flex flex-col justify-end">
+                                <span className="text-xs text-muted-foreground">Subtotal</span>
+                                <span className="text-sm font-semibold h-9 flex items-center">{formatCurrency(itemSubtotal)}</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+
+            {!isEditMode && (
+                <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full border-dashed"
+                    onClick={() => append({ productName: '', quantity: 1, unitPrice: 0 })}
+                    disabled={!selectedWarehouseId}
+                >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Agregar Producto
+                </Button>
+            )}
+
+            <div className="flex justify-between items-center p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <span className="font-semibold">Total General:</span>
+                <span className="text-xl font-bold text-primary">{formatCurrency(totalAmount)}</span>
+            </div>
         </div>
         
          <FormField
