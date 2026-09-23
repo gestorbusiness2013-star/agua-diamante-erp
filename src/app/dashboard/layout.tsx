@@ -13,6 +13,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { UserNav } from '@/components/user-nav';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { Gauge, Archive, Factory, Users, Warehouse, Landmark, ArrowRightLeft, Loader2, AlertCircle, Building, ShoppingBag, Briefcase, Route, AreaChart, ShoppingCart, MapPinned } from 'lucide-react';
 import Link from 'next/link';
 import { useInventory } from '@/context/inventory-context';
@@ -252,6 +253,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      <ErrorBoundary fallbackMessage="Error en el Dashboard">
+        <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      </ErrorBoundary>
   );
 }

@@ -31,18 +31,23 @@ export default function UsersPage() {
     };
 
     const handleUserSubmit = async (values: UserFormValues) => {
-        if (isEditMode && selectedUser) {
-            await updateUser({ 
-                ...selectedUser, 
-                name: values.name, 
-                role: values.role, 
-                commissionRate: values.commissionRate,
-                permissions: values.permissions
-            });
-        } else {
-            await createUser(values);
+        try {
+            if (isEditMode && selectedUser) {
+                await updateUser({ 
+                    ...selectedUser, 
+                    name: values.name, 
+                    role: values.role, 
+                    commissionRate: values.commissionRate,
+                    permissions: values.permissions
+                });
+            } else {
+                await createUser(values);
+            }
+            setUserDialogOpen(false);
+        } catch (error: any) {
+            console.error("Error in user submit:", error);
+            toast({ variant: "destructive", title: "Error", description: error?.message || "Ocurrió un error inesperado." });
         }
-        setUserDialogOpen(false);
     };
 
     return (

@@ -198,7 +198,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             expenses: { setter: setExpenses, process: (doc: any) => convertTimestampsToDates({...doc.data(), id: doc.id}) as Expense, sort: (a: Expense, b: Expense) => b.date.getTime() - a.date.getTime() },
             employees: { setter: setEmployees, process: (doc: any) => convertTimestampsToDates({...doc.data(), id: doc.id}) as Employee },
             paidPayrolls: { setter: setPaidPayrolls, process: (doc: any) => doc.id, sort: (a: string, b: string) => b.localeCompare(a) },
-            users: { setter: setUsers, process: (doc: any) => convertTimestampsToDates({...doc.data(), id: doc.id}) as User },
+            users: { setter: setUsers, process: (doc: any) => {
+                const data = doc.data();
+                if (!data) return null;
+                const processed = convertTimestampsToDates({...data, id: doc.id});
+                // Ensure required fields have safe defaults to prevent render crashes
+                return {
+                    ...processed,
+                    id: processed.id || doc.id,
+                    name: processed.name || 'Usuario',
+                    email: processed.email || '',
+                    role: processed.role || 'Operador',
+                } as User;
+            }, sort: undefined, filter: (item: any) => item !== null },
             productionLines: { setter: setProductionLines, process: (doc: any) => convertTimestampsToDates({...doc.data(), id: doc.id}) as ProductionLine },
             suppliers: { setter: setSuppliers, process: (doc: any) => ({...doc.data(), id: doc.id} as Supplier) },
             customers: { setter: setCustomers, process: (doc: any) => ({ ...doc.data(), id: doc.id } as Customer) },
@@ -219,12 +231,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             const collectionRef = collection(db, name);
             return onSnapshot(collectionRef, 
                 (snapshot) => {
-                    if (name === 'recipes') {
-                         config.setter(config.process(snapshot));
-                    } else {
-                        let data = snapshot.docs.map(config.process);
-                        if (config.sort) data = data.sort(config.sort as any);
-                        config.setter(data as any);
+                    try {
+                        if (name === 'recipes') {
+                             config.setter(config.process(snapshot));
+                        } else {
+                            let data = snapshot.docs.map(config.process);
+                            if (config.filter) data = data.filter(config.filter);
+                            if (config.sort) data = data.sort(config.sort as any);
+                            config.setter(data as any);
+                        }
+                    } catch (processingError) {
+                        console.error(`Error processing ${name} data:`, processingError);
                     }
                     setLoading(false);
                 },
@@ -832,51 +849,66 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     };
 
     const createUser = async (userData: UserFormValues) => {
-        const tempAppName = `temp-app-${Date.now()}`;
-        const tempApp = initializeApp(firebaseConfig, tempAppName);
-        // Critical: Initialize secondary Auth with in-memory persistence directly to avoid polluting browser session storage
-        const tempAuth = initializeAuth(tempApp, {
-            persistence: inMemoryPersistence,
-        });
-
+        let tempApp: any = null;
         try {
+            // Validate password before proceeding
+            if (!userData.password || userData.password.length < 6) {
+                toast({ variant: "destructive", title: "Error", description: "La contraseña debe tener al menos 6 caracteres." });
+                return;
+            }
+
+            const tempAppName = `temp-app-${Date.now()}`;
+            tempApp = initializeApp(firebaseConfig, tempAppName);
+            // Critical: Initialize secondary Auth with in-memory persistence directly to avoid polluting browser session storage
+            const tempAuth = initializeAuth(tempApp, {
+                persistence: inMemoryPersistence,
+            });
+
             // 1. Create user in Auth using secondary app
-            const userCredential = await createUserWithEmailAndPassword(tempAuth, userData.email, userData.password!);
+            const userCredential = await createUserWithEmailAndPassword(tempAuth, userData.email, userData.password);
             const uid = userCredential.user.uid;
 
-            // 2. Save profile in Firestore (using primary db instance)
+            // 2. Sign out immediately from temp auth BEFORE writing to Firestore
+            // This prevents any race condition with the primary auth listener
+            try { await signOut(tempAuth); } catch(e) { /* ignore signout errors */ }
+
+            // 3. Build cleaned user profile without undefined properties
             const { password, confirmPassword, isEditMode, ...profileData } = userData;
             
-            // Build cleaned user profile without undefined properties
             const cleanedProfile: Record<string, any> = {
                 id: uid,
-                name: profileData.name,
+                name: profileData.name || 'Nuevo Usuario',
                 email: profileData.email,
-                role: profileData.role,
-                permissions: profileData.permissions || getDefaultPermissions(profileData.role),
+                role: profileData.role || 'Operador',
+                permissions: profileData.permissions || getDefaultPermissions(profileData.role || 'Operador'),
             };
 
             if (profileData.role === 'Vendedor' && profileData.commissionRate !== undefined && profileData.commissionRate !== null && !isNaN(profileData.commissionRate)) {
                 cleanedProfile.commissionRate = Number(profileData.commissionRate);
             }
 
+            // 4. Save profile in Firestore (using primary db instance)
             await setDoc(doc(db, 'users', uid), cleanedProfile);
 
-            // 3. Cleanup secondary instance
-            await signOut(tempAuth);
-            await deleteApp(tempApp);
+            // 5. Cleanup secondary app instance
+            try { await deleteApp(tempApp); tempApp = null; } catch(e) { /* ignore cleanup errors */ }
 
             toast({ title: "Usuario Creado", description: "El acceso y el perfil han sido configurados correctamente." });
         } catch (error: any) {
             console.error("Error creating user:", error);
             let msg = "No se pudo crear el usuario.";
             if (error?.code === 'auth/email-already-in-use') msg = "El correo ya está registrado.";
-            if (error?.code === 'auth/weak-password') msg = "La contraseña es muy débil.";
-            if (error?.message && !error?.code) msg += ` (${error.message})`;
+            else if (error?.code === 'auth/weak-password') msg = "La contraseña es muy débil (mínimo 6 caracteres).";
+            else if (error?.code === 'auth/invalid-email') msg = "El correo electrónico no es válido.";
+            else if (error?.code === 'auth/operation-not-allowed') msg = "La creación de cuentas no está habilitada en Firebase.";
+            else if (error?.code === 'auth/network-request-failed') msg = "Error de red. Verifica tu conexión a internet.";
+            else if (error?.message) msg += ` (${error.message})`;
             toast({ variant: "destructive", title: "Error al crear usuario", description: msg });
-            
-            // Attempt cleanup on failure
-            try { await deleteApp(tempApp); } catch(e) {}
+        } finally {
+            // Guarantee cleanup of temporary Firebase app
+            if (tempApp) {
+                try { await deleteApp(tempApp); } catch(e) { /* ignore */ }
+            }
         }
     };
 
