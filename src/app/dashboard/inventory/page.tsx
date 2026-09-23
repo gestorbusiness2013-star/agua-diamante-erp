@@ -126,13 +126,25 @@ export default function InventoryPage() {
             finalStatus = values.quantity <= values.lowStockThreshold ? 'Stock Bajo' : 'En Stock';
         }
         
-        // Exclude accessKey — never store it in Firestore
-        const { accessKey, ...cleanValues } = values;
-        const materialData = { 
-            ...cleanValues, 
-            status: finalStatus, 
-            supplierId: cleanValues.supplierId === 'none' ? undefined : (cleanValues.supplierId || undefined)
+        // Build clean object - Firestore cannot store undefined values
+        const materialData: {
+            name: string;
+            quantity: number;
+            unit: string;
+            status: "En Stock" | "Stock Bajo" | "Pedido";
+            lowStockThreshold: number;
+            supplierId?: string;
+        } = {
+            name: values.name,
+            quantity: values.quantity,
+            unit: values.unit,
+            status: finalStatus,
+            lowStockThreshold: values.lowStockThreshold,
         };
+        // Only add supplierId if it has a real value (not 'none' or empty)
+        if (values.supplierId && values.supplierId !== 'none') {
+            materialData.supplierId = values.supplierId;
+        }
 
         if(isEditMode && selectedItem) {
             await updateInventoryItem({ 
@@ -140,12 +152,11 @@ export default function InventoryPage() {
                 ...materialData, 
             });
         } else {
-            await addInventoryItem({
-                ...materialData,
-            });
+            await addInventoryItem(materialData);
         }
         handleCloseMaterialDialog();
     };
+
 
     const handleOpenDeleteDialog = (item: InventoryItem) => {
         setItemToDelete(item);

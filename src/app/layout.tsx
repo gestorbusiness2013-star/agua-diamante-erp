@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/auth-context';
 import { InventoryProvider } from '@/context/inventory-context';
+import { DOMGuardian } from '@/components/dom-guardian';
 
 export const metadata: Metadata = {
   title: 'Agua Diamante ERP',
@@ -16,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es" className="notranslate" translate="no">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -24,9 +25,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Agua Diamante" />
+        <meta name="google" content="notranslate" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased notranslate" translate="no">
+        <DOMGuardian />
         <AuthProvider>
           <InventoryProvider>
             {children}

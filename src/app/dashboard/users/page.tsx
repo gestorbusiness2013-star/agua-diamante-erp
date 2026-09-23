@@ -33,10 +33,10 @@ export default function UsersPage() {
     const handleUserSubmit = async (values: UserFormValues) => {
         try {
             if (isEditMode && selectedUser) {
-                await updateUser({ 
-                    ...selectedUser, 
-                    name: values.name, 
-                    role: values.role, 
+                await updateUser({
+                    ...selectedUser,
+                    name: values.name,
+                    role: values.role,
                     commissionRate: values.commissionRate,
                     permissions: values.permissions
                 });

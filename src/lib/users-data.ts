@@ -41,21 +41,22 @@ export const permissionLabels: Record<keyof UserPermissions, string> = {
     expenses: "Gastos y Nómina",
 };
 
-export const getDefaultPermissions = (role: "Admin" | "Operador" | "Supervisor" | "Gerente de Planta" | "Vendedor"): UserPermissions => {
+export const getDefaultPermissions = (role: "Admin" | "Administración" | "Operador" | "Supervisor" | "Gerente de Planta" | "Vendedor" | string): UserPermissions => {
+    const isAdmin = role === 'Admin' || role === 'Administración';
     return {
         panel: true,
         inventory: true,
         suppliers: true,
         purchases: true,
-        customers: role === 'Admin' || role === 'Vendedor',
-        routes: role === 'Admin' || role === 'Vendedor',
-        vendedores: role === 'Admin' || role === 'Vendedor',
+        customers: isAdmin || role === 'Vendedor',
+        routes: isAdmin || role === 'Vendedor',
+        vendedores: isAdmin || role === 'Vendedor',
         warehouses: true,
         sales: true,
         production: true,
         movements: role !== 'Gerente de Planta' && role !== 'Vendedor',
-        market: role === 'Admin',
-        users: role === 'Admin',
+        market: isAdmin,
+        users: isAdmin,
         expenses: true,
     };
 };
@@ -64,7 +65,7 @@ export type User = {
     id: string; // Coincide con el UID de Firebase Auth
     name: string;
     email: string;
-    role: "Admin" | "Operador" | "Supervisor" | "Gerente de Planta" | "Vendedor";
+    role: "Admin" | "Administración" | "Operador" | "Supervisor" | "Gerente de Planta" | "Vendedor";
     commissionRate?: number; // Porcentaje de comisión, ej: 5 para 5%
     lastLocation?: { lat: number, lng: number };
     lastLocationTimestamp?: Timestamp;
@@ -75,7 +76,7 @@ export type User = {
 export const userFormSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
   email: z.string().email('El correo electrónico no es válido.'),
-  role: z.enum(['Admin', 'Operador', 'Supervisor', 'Gerente de Planta', 'Vendedor']),
+  role: z.enum(['Admin', 'Administración', 'Operador', 'Supervisor', 'Gerente de Planta', 'Vendedor']),
   commissionRate: z.coerce.number().min(0, 'La comisión no puede ser negativa.').optional(),
   password: z.string().optional(),
   confirmPassword: z.string().optional(),

@@ -56,6 +56,28 @@ export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFor
         },
   });
 
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        ...initialData,
+        commissionRate: initialData.commissionRate || 0,
+        isEditMode: true,
+        permissions: initialData.permissions || getDefaultPermissions(initialData.role)
+      });
+    } else {
+      form.reset({
+        name: '',
+        email: '',
+        role: 'Operador',
+        commissionRate: 0,
+        password: '',
+        confirmPassword: '',
+        isEditMode: false,
+        permissions: getDefaultPermissions('Operador'),
+      });
+    }
+  }, [initialData, form]);
+
   const selectedRole = form.watch('role');
 
   const handleFormSubmit = async (values: UserFormValues) => {
@@ -110,7 +132,7 @@ export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFor
                     form.setValue(`permissions.${k}` as any, v);
                   });
                 }}
-                defaultValue={field.value}
+                value={field.value}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -119,6 +141,7 @@ export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFor
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="Administración">Administración</SelectItem>
                   <SelectItem value="Gerente de Planta">Gerente de Planta</SelectItem>
                   <SelectItem value="Supervisor">Supervisor</SelectItem>
                   <SelectItem value="Vendedor">Vendedor</SelectItem>
