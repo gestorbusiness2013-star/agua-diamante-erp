@@ -3,7 +3,7 @@
 import { useInventory } from "@/context/inventory-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format, addDays } from 'date-fns';
+import { format, addDays, subDays, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useMemo } from "react";
@@ -73,6 +73,44 @@ export default function SalesPage() {
     const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
     const [date, setDate] = useState<DateRange | undefined>();
     const [searchQuery, setSearchQuery] = useState("");
+    const [dispatchedDate, setDispatchedDate] = useState<DateRange | undefined>(() => {
+        const today = new Date();
+        return {
+            from: startOfMonth(today),
+            to: endOfMonth(today),
+        };
+    });
+
+    const isQuickActive = (type: 'today' | '7days' | 'month' | 'all') => {
+        if (type === 'all') return !dispatchedDate;
+        if (!dispatchedDate || !dispatchedDate.from) return false;
+        const today = new Date();
+        if (type === 'today') {
+            return isSameDay(dispatchedDate.from, today) && (!dispatchedDate.to || isSameDay(dispatchedDate.to, today));
+        }
+        if (type === 'month') {
+            return isSameDay(dispatchedDate.from, startOfMonth(today)) && 
+                   (dispatchedDate.to ? isSameDay(dispatchedDate.to, endOfMonth(today)) : true);
+        }
+        if (type === '7days') {
+            return isSameDay(dispatchedDate.from, subDays(today, 7)) && 
+                   (dispatchedDate.to ? isSameDay(dispatchedDate.to, today) : true);
+        }
+        return false;
+    };
+
+    const setQuickRange = (range: 'today' | '7days' | 'month' | 'all') => {
+        const today = new Date();
+        if (range === 'today') {
+            setDispatchedDate({ from: today, to: today });
+        } else if (range === '7days') {
+            setDispatchedDate({ from: subDays(today, 7), to: today });
+        } else if (range === 'month') {
+            setDispatchedDate({ from: startOfMonth(today), to: endOfMonth(today) });
+        } else if (range === 'all') {
+            setDispatchedDate(undefined);
+        }
+    };
 
     // Estado para la autorización de anulación por parte del Administrador
     const [adminAuthDialogOpen, setAdminAuthDialogOpen] = useState(false);
@@ -174,8 +212,64 @@ export default function SalesPage() {
         });
     }, [filteredSales]);
     
+    const userVisibleSales = useMemo(() => {
+        if (!sales) return [];
+        let list = [...sales];
+        const isCompanyWideViewer = currentUser?.role === 'Admin' || 
+                                    currentUser?.role === 'Administración' || 
+                                    currentUser?.role === 'Supervisor' || 
+                                    currentUser?.role === 'Gerente de Planta' ||
+                                    currentUser?.email?.toLowerCase() === 'barbarac@diamante.com';
+
+        if (currentUser?.role && !isCompanyWideViewer) {
+            const currentName = (currentUser.name || '').trim().toLowerCase();
+            const currentEmail = (currentUser.email || '').trim().toLowerCase();
+            list = list.filter(s => {
+                const saleUser = (s.user || '').trim().toLowerCase();
+                if (saleUser === currentName) return true;
+                if (currentEmail && saleUser === currentEmail) return true;
+                if (currentName.includes('barbara') && saleUser.includes('babara')) return true;
+                if (currentName.includes('babara') && saleUser.includes('barbara')) return true;
+                return false;
+            });
+        }
+        return list;
+    }, [sales, currentUser]);
+
     const pendingSales = useMemo(() => filteredSales.filter(s => s.status === 'Pendiente'), [filteredSales]);
-    const dispatchedSales = useMemo(() => filteredSales.filter(s => s.status === 'Despachado' || s.status === 'Pagado'), [filteredSales]);
+    
+    const dispatchedSales = useMemo(() => {
+        let list = userVisibleSales.filter(s => s.status === 'Despachado' || s.status === 'Pagado');
+
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            list = list.filter(s => {
+                const matchCustomer = (s.customerName?.toLowerCase() || "").includes(query);
+                const matchInvoice = (s.invoiceNumber?.toLowerCase() || "").includes(query);
+                const items = getSaleItems(s);
+                const matchProduct = items.some(i => i.productName.toLowerCase().includes(query));
+                return matchCustomer || matchInvoice || matchProduct;
+            });
+        }
+
+        if (dispatchedDate?.from) {
+            const fromDate = new Date(dispatchedDate.from);
+            fromDate.setHours(0, 0, 0, 0);
+            const toDate = dispatchedDate.to ? new Date(dispatchedDate.to) : new Date(dispatchedDate.from);
+            toDate.setHours(23, 59, 59, 999);
+            list = list.filter(sale => {
+                const saleDate = new Date(sale.date);
+                return saleDate >= fromDate && saleDate <= toDate;
+            });
+        }
+
+        return list.sort((a, b) => {
+            const timeA = a.date ? new Date(a.date).getTime() : 0;
+            const timeB = b.date ? new Date(b.date).getTime() : 0;
+            return timeB - timeA;
+        });
+    }, [userVisibleSales, searchQuery, dispatchedDate]);
+
     const consignmentSales = useMemo(() => filteredSales.filter(s => s.status === 'Por Cobrar'), [filteredSales]);
     const cancelledSales = useMemo(() => filteredSales.filter(s => s.status === 'Cancelado'), [filteredSales]);
     
@@ -637,7 +731,108 @@ export default function SalesPage() {
                 </TabsList>
                 <TabsContent value="pending" className="mt-4">{renderSalesTable(pendingSales, 'Pendientes')}</TabsContent>
                 <TabsContent value="consignment" className="mt-4">{renderSalesTable(consignmentSales, 'Por Cobrar')}</TabsContent>
-                <TabsContent value="dispatched" className="mt-4">{renderSalesTable(dispatchedSales, 'Despachadas')}</TabsContent>
+                <TabsContent value="dispatched" className="mt-4 space-y-4">
+                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 p-3.5 rounded-xl border bg-muted/40 shadow-xs">
+                        <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+                                <CalendarIcon className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-semibold">Búsqueda de Despachadas por Fecha</h4>
+                                <p className="text-xs text-muted-foreground">
+                                    {dispatchedDate?.from ? (
+                                        <>Filtrando desde <span className="font-medium text-foreground">{format(dispatchedDate.from, "dd/MM/yyyy")}</span> hasta <span className="font-medium text-foreground">{dispatchedDate.to ? format(dispatchedDate.to, "dd/MM/yyyy") : format(dispatchedDate.from, "dd/MM/yyyy")}</span> ({dispatchedSales.length} órdenes)</>
+                                    ) : (
+                                        <>Mostrando todas las órdenes despachadas ({dispatchedSales.length} órdenes)</>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                            <div className="flex items-center gap-1 bg-background border rounded-lg p-0.5 shadow-xs">
+                                <Button 
+                                    type="button"
+                                    variant={isQuickActive('today') ? "default" : "ghost"} 
+                                    size="sm" 
+                                    className="h-7 text-xs px-2.5"
+                                    onClick={() => setQuickRange('today')}
+                                >
+                                    Hoy
+                                </Button>
+                                <Button 
+                                    type="button"
+                                    variant={isQuickActive('7days') ? "default" : "ghost"} 
+                                    size="sm" 
+                                    className="h-7 text-xs px-2.5"
+                                    onClick={() => setQuickRange('7days')}
+                                >
+                                    7 días
+                                </Button>
+                                <Button 
+                                    type="button"
+                                    variant={isQuickActive('month') ? "default" : "ghost"} 
+                                    size="sm" 
+                                    className="h-7 text-xs px-2.5"
+                                    onClick={() => setQuickRange('month')}
+                                >
+                                    Este Mes
+                                </Button>
+                                <Button 
+                                    type="button"
+                                    variant={isQuickActive('all') ? "default" : "ghost"} 
+                                    size="sm" 
+                                    className="h-7 text-xs px-2.5"
+                                    onClick={() => setQuickRange('all')}
+                                >
+                                    Todas
+                                </Button>
+                            </div>
+
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" size="sm" className="h-8 text-xs font-normal border-dashed">
+                                        <CalendarIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                                        {dispatchedDate?.from ? (
+                                            dispatchedDate.to ? (
+                                                `${format(dispatchedDate.from, "dd/MM/yyyy")} - ${format(dispatchedDate.to, "dd/MM/yyyy")}`
+                                            ) : (
+                                                format(dispatchedDate.from, "dd/MM/yyyy")
+                                            )
+                                        ) : (
+                                            "Rango Personalizado"
+                                        )}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="end">
+                                    <Calendar 
+                                        initialFocus 
+                                        mode="range" 
+                                        defaultMonth={dispatchedDate?.from || new Date()} 
+                                        selected={dispatchedDate} 
+                                        onSelect={setDispatchedDate} 
+                                        numberOfMonths={2} 
+                                        locale={es}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+
+                            {dispatchedDate && (
+                                <Button 
+                                    type="button"
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => setDispatchedDate(undefined)} 
+                                    className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                                >
+                                    Restablecer
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+
+                    {renderSalesTable(dispatchedSales, 'Despachadas')}
+                </TabsContent>
                 <TabsContent value="cancelled" className="mt-4">{renderSalesTable(cancelledSales, 'Canceladas')}</TabsContent>
             </Tabs>
 
