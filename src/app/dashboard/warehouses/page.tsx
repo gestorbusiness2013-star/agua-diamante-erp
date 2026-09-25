@@ -526,7 +526,7 @@ export default function WarehousesPage() {
             <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <DialogTitle>¿Estás seguro de eliminar el almacén?</DialogTitle>
+                        <AlertDialogTitle>¿Estás seguro de eliminar el almacén?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Esta acción no se puede deshacer. Se eliminará permanentemente el almacén.
                         </AlertDialogDescription>
