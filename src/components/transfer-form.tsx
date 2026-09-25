@@ -64,8 +64,8 @@ export function TransferForm({ finishedProducts, warehouses, onSubmit, onClose }
   const selectedSourceId = form.watch('sourceId');
 
   const availableProducts = selectedSourceId === 'factory' 
-    ? finishedProducts.map(p => ({ id: p.id, name: p.name, quantity: p.quantity }))
-    : (warehouses.find(w => String(w.id) === selectedSourceId)?.stock || []).map(s => ({ id: s.productName, name: s.productName, quantity: s.quantity }));
+    ? finishedProducts.filter(p => p.quantity > 0).map(p => ({ id: p.id, name: p.name, quantity: p.quantity }))
+    : (warehouses.find(w => String(w.id) === selectedSourceId)?.stock || []).filter(s => (Number(s.quantity) || 0) > 0).map(s => ({ id: s.productName, name: s.productName, quantity: s.quantity }));
 
   return (
     <Form {...form}>

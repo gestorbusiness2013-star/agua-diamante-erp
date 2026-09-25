@@ -112,7 +112,7 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
     if (selectedWarehouseId) {
       const warehouse = warehouses.find(w => String(w.id) === selectedWarehouseId);
       if (warehouse) {
-          setAvailableProducts([...warehouse.stock]);
+          setAvailableProducts(warehouse.stock.filter(s => (Number(s.quantity) || 0) > 0));
       } else {
         setAvailableProducts([]);
       }

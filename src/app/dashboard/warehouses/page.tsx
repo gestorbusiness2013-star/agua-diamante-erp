@@ -93,7 +93,8 @@ export default function WarehousesPage() {
     };
 
     const handleOpenDeleteDialog = (warehouse: Warehouse) => {
-        if (warehouse.stock.length > 0) {
+        const hasStock = warehouse.stock && warehouse.stock.some(item => (Number(item.quantity) || 0) > 0);
+        if (hasStock) {
             toast({
                 variant: "destructive",
                 title: "Almacén no vacío",
@@ -101,6 +102,22 @@ export default function WarehousesPage() {
             });
             return;
         }
+
+        const hasPendingTransfers = movements.some(
+            m => m.type === 'Transferencia' && 
+                 m.status === 'Pendiente' && 
+                 (String(m.destWarehouseId) === String(warehouse.id) || String(m.sourceId) === String(warehouse.id))
+        );
+
+        if (hasPendingTransfers) {
+            toast({
+                variant: "destructive",
+                title: "Transferencias pendientes",
+                description: "No se puede eliminar un almacén con transferencias en tránsito.",
+            });
+            return;
+        }
+
         setWarehouseToDelete(warehouse);
         setDeleteAlertOpen(true);
     };
@@ -276,7 +293,7 @@ export default function WarehousesPage() {
                                    </div>
                                </div>
                                <AccordionContent>
-                                   {warehouse.stock.length > 0 ? (
+                                   {warehouse.stock && warehouse.stock.some(item => (Number(item.quantity) || 0) > 0) ? (
                                        <Table>
                                            <TableHeader>
                                                <TableRow>
@@ -285,7 +302,7 @@ export default function WarehousesPage() {
                                                </TableRow>
                                            </TableHeader>
                                            <TableBody>
-                                               {warehouse.stock.map(item => (
+                                               {warehouse.stock.filter(item => (Number(item.quantity) || 0) > 0).map(item => (
                                                    <TableRow 
                                                         key={item.productName}
                                                         onClick={() => setSelectedStockItem({ warehouseId: warehouse.id, productName: item.productName })}
@@ -465,7 +482,7 @@ export default function WarehousesPage() {
                     </DialogHeader>
                     <SaleForm
                         initialData={null}
-                        warehouses={warehouses.filter(w => w.stock.length > 0)}
+                        warehouses={warehouses.filter(w => w.stock && w.stock.some(item => (Number(item.quantity) || 0) > 0))}
                         customers={customers}
                         onSubmit={handleSaleSubmit}
                         onClose={() => setSaleDialogOpen(false)}

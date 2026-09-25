@@ -441,7 +441,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                         throw new Error("Stock insuficiente en almacén de origen.");
                     }
                     sourceStock[sourceIndex].quantity -= values.quantity;
-                    transaction.update(sourceWarehouseRef, { stock: sourceStock });
+                    const cleanStock = sourceStock.filter(s => s.quantity > 0);
+                    transaction.update(sourceWarehouseRef, { stock: cleanStock });
                     detailsText = `De ${sourceWarehouseData.name} a ${destWarehouseData.name}`;
                 }
 

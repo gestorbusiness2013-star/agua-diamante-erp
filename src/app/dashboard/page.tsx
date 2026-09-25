@@ -162,14 +162,14 @@ export default function DashboardPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {warehouses.filter(w => w.stock.length > 0).length > 0 ? (
+                    {warehouses.filter(w => w.stock && w.stock.some(item => (Number(item.quantity) || 0) > 0)).length > 0 ? (
                         <Accordion type="multiple" className="w-full">
-                            {warehouses.filter(w => w.stock.length > 0).map(warehouse => (
+                            {warehouses.filter(w => w.stock && w.stock.some(item => (Number(item.quantity) || 0) > 0)).map(warehouse => (
                                 <AccordionItem value={`warehouse-${warehouse.id}`} key={warehouse.id}>
                                     <AccordionTrigger>{warehouse.name}</AccordionTrigger>
                                     <AccordionContent>
                                         <ul className="space-y-2">
-                                            {warehouse.stock.map(item => (
+                                            {warehouse.stock.filter(item => (Number(item.quantity) || 0) > 0).map(item => (
                                                  <li key={item.productName} className="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
                                                     <span className="text-muted-foreground">{item.productName}</span>
                                                     <span className="font-mono font-semibold text-foreground">{item.quantity.toLocaleString('es-ES')}</span>
