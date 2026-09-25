@@ -10,7 +10,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MoreHorizontal, PlusCircle, PackageCheck, AlertTriangle, DollarSign, Calendar as CalendarIcon, TrendingUp, Search, ShoppingCart, Activity } from "lucide-react";
+import { MoreHorizontal, PlusCircle, PackageCheck, AlertTriangle, DollarSign, Calendar as CalendarIcon, TrendingUp, Search, ShoppingCart, Activity, ShieldAlert, KeyRound, Lock, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
 import {
   DropdownMenu,
@@ -40,6 +40,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { initialUsers } from "@/lib/users-data";
+import { verifyAdminCredentials } from "@/lib/auth-helpers";
 
 declare module 'jspdf' {
     interface jsPDF {
@@ -57,6 +61,7 @@ export default function SalesPage() {
         dispatchSaleOrder,
         cancelSaleOrder,
         collectConsignmentPayment,
+        users,
     } = useInventory();
 
     const { currentUser } = useAuth();
@@ -68,6 +73,20 @@ export default function SalesPage() {
     const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
     const [date, setDate] = useState<DateRange | undefined>();
     const [searchQuery, setSearchQuery] = useState("");
+
+    // Estado para la autorización de anulación por parte del Administrador
+    const [adminAuthDialogOpen, setAdminAuthDialogOpen] = useState(false);
+    const [saleToCancel, setSaleToCancel] = useState<Sale | null>(null);
+    const [selectedAdminEmail, setSelectedAdminEmail] = useState("");
+    const [adminKey, setAdminKey] = useState("");
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [adminAuthError, setAdminAuthError] = useState<string | null>(null);
+
+    const adminUsers = useMemo(() => {
+        const dbAdmins = (users || []).filter(u => u.role === 'Admin' || u.role === 'Administración');
+        if (dbAdmins.length > 0) return dbAdmins;
+        return initialUsers.filter(u => u.role === 'Admin' || u.role === 'Administración');
+    }, [users]);
 
     useEffect(() => {
         setIsClient(true);
@@ -294,8 +313,67 @@ export default function SalesPage() {
         handleCloseDialogs();
     };
     
+    const handleRequestCancel = (sale: Sale) => {
+        const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'Administración';
+        if (isAdmin) {
+            setAlertDialog({ open: true, type: 'cancel', sale });
+        } else {
+            setSaleToCancel(sale);
+            setAdminKey('');
+            setAdminAuthError(null);
+            const defaultAdmin = adminUsers[0]?.email || '';
+            setSelectedAdminEmail(defaultAdmin);
+            setAdminAuthDialogOpen(true);
+        }
+    };
+
+    const handleAuthorizeAndCancel = async () => {
+        if (!saleToCancel || !adminKey.trim()) return;
+        setIsVerifying(true);
+        setAdminAuthError(null);
+
+        try {
+            const isValid = await verifyAdminCredentials(selectedAdminEmail, adminKey.trim());
+            if (!isValid) {
+                setAdminAuthError("Clave o contraseña de administrador incorrecta. Verifique e intente nuevamente.");
+                setIsVerifying(false);
+                return;
+            }
+
+            const foundAdmin = adminUsers.find(u => u.email.toLowerCase() === selectedAdminEmail.toLowerCase());
+            const authorizingAdminName = foundAdmin ? foundAdmin.name : 'Administrador';
+
+            const authorizedUser = {
+                name: `${currentUser?.name || 'Vendedor'} (Autorizado por Admin: ${authorizingAdminName})`
+            };
+
+            await cancelSaleOrder(saleToCancel, authorizedUser);
+
+            toast({
+                title: "Venta Anulada",
+                description: `La orden ${saleToCancel.invoiceNumber} fue anulada con la autorización del administrador ${authorizingAdminName}.`
+            });
+
+            setAdminAuthDialogOpen(false);
+            setSaleToCancel(null);
+            setAdminKey('');
+        } catch (error: any) {
+            console.error("Error al autorizar anulación:", error);
+            setAdminAuthError(error.message || "Error al verificar la clave de administrador.");
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+    
     const handleCancel = async () => {
         if (alertDialog.sale && currentUser) {
+            const isAdmin = currentUser.role === 'Admin' || currentUser.role === 'Administración';
+            if (!isAdmin) {
+                const sale = alertDialog.sale;
+                handleCloseDialogs();
+                handleRequestCancel(sale);
+                return;
+            }
             await cancelSaleOrder(alertDialog.sale, currentUser);
         }
         handleCloseDialogs();
@@ -392,7 +470,7 @@ export default function SalesPage() {
                                                     {sale.status === 'Pendiente' && canDispatch && <DropdownMenuItem onClick={() => setAlertDialog({ open: true, type: 'dispatch', sale })}><PackageCheck className="mr-2 h-4 w-4"/>Despachar</DropdownMenuItem>}
                                                     {sale.status === 'Por Cobrar' && <DropdownMenuItem onClick={() => setAlertDialog({ open: true, type: 'collect', sale })}><DollarSign className="mr-2 h-4 w-4"/>Registrar Pago</DropdownMenuItem>}
                                                     {sale.status === 'Pendiente' && <DropdownMenuItem onClick={() => handleOpenEditDialog(sale)}>Editar</DropdownMenuItem>}
-                                                    {sale.status !== 'Cancelado' && <DropdownMenuItem onClick={() => setAlertDialog({ open: true, type: 'cancel', sale })} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><AlertTriangle className="mr-2 h-4 w-4"/>Anular Orden</DropdownMenuItem>}
+                                                    {sale.status !== 'Cancelado' && <DropdownMenuItem onClick={() => handleRequestCancel(sale)} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><AlertTriangle className="mr-2 h-4 w-4"/>Anular Orden</DropdownMenuItem>}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
@@ -586,6 +664,147 @@ export default function SalesPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Modal de Autorización de Administrador para Anulación por Vendedores */}
+            <Dialog 
+                open={adminAuthDialogOpen} 
+                onOpenChange={(open) => {
+                    if (!isVerifying) {
+                        setAdminAuthDialogOpen(open);
+                        if (!open) {
+                            setSaleToCancel(null);
+                            setAdminKey('');
+                            setAdminAuthError(null);
+                        }
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
+                                <ShieldAlert className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-lg">Autorización de Administrador</DialogTitle>
+                                <DialogDescription className="text-xs text-muted-foreground">
+                                    Clave de seguridad requerida para anular venta
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        <div className="rounded-lg border bg-muted/50 p-3.5 text-sm space-y-1.5">
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground font-medium">Nº Factura / Orden:</span>
+                                <span className="font-semibold font-mono text-foreground">{saleToCancel?.invoiceNumber}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground font-medium">Cliente:</span>
+                                <span className="font-medium text-foreground">{saleToCancel?.customerName}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground font-medium">Monto Total:</span>
+                                <span className="font-bold text-foreground">{saleToCancel ? formatCurrency(saleToCancel.totalAmount) : ''}</span>
+                            </div>
+                            <p className="text-xs text-amber-600 dark:text-amber-400 pt-1.5 border-t border-border/50">
+                                ⚠️ Los vendedores deben solicitar a un Administrador que ingrese su clave o contraseña para anular esta orden.
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="admin-select" className="text-xs font-semibold">Administrador Autorizador</Label>
+                            <Select 
+                                value={selectedAdminEmail} 
+                                onValueChange={(val) => {
+                                    setSelectedAdminEmail(val);
+                                    setAdminAuthError(null);
+                                }}
+                            >
+                                <SelectTrigger id="admin-select" className="w-full">
+                                    <SelectValue placeholder="Seleccione el Administrador" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {adminUsers.map((admin) => (
+                                        <SelectItem key={admin.email} value={admin.email}>
+                                            {admin.name} ({admin.email})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="admin-key" className="text-xs font-semibold">Clave / Contraseña del Administrador</Label>
+                            <div className="relative">
+                                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    id="admin-key"
+                                    type="password"
+                                    placeholder="Introduce la contraseña o clave del admin"
+                                    value={adminKey}
+                                    onChange={(e) => {
+                                        setAdminKey(e.target.value);
+                                        setAdminAuthError(null);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && adminKey.trim() && !isVerifying) {
+                                            handleAuthorizeAndCancel();
+                                        }
+                                    }}
+                                    className="pl-9"
+                                    autoFocus
+                                />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                                Ingrese la contraseña de la cuenta del administrador o la clave administrativa del sistema.
+                            </p>
+                        </div>
+
+                        {adminAuthError && (
+                            <div className="flex items-center gap-2 p-2.5 rounded-md bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20">
+                                <AlertTriangle className="h-4 w-4 shrink-0" />
+                                <span>{adminAuthError}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2 border-t">
+                        <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => {
+                                setAdminAuthDialogOpen(false);
+                                setSaleToCancel(null);
+                                setAdminKey('');
+                                setAdminAuthError(null);
+                            }}
+                            disabled={isVerifying}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button 
+                            type="button" 
+                            variant="destructive"
+                            onClick={handleAuthorizeAndCancel}
+                            disabled={isVerifying || !adminKey.trim()}
+                        >
+                            {isVerifying ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Verificando...
+                                </>
+                            ) : (
+                                <>
+                                    <Lock className="mr-2 h-4 w-4" />
+                                    Autorizar y Anular
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
