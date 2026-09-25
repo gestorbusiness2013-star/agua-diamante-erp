@@ -114,6 +114,7 @@ interface InventoryContextType {
     stockRequests: StockRequest[];
     createStockRequest: (values: StockRequestFormValues, currentUser: User) => Promise<void>;
     updateStockRequestStatus: (requestId: string, status: 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Completado') => Promise<void>;
+    deleteStockRequest: (requestId: string) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -1107,13 +1108,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const deleteStockRequest = async (requestId: string) => {
+        try {
+            await deleteDoc(doc(db, 'stockRequests', requestId));
+            toast({ title: "Solicitud Eliminada" });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error al eliminar solicitud', description: error.message });
+        }
+    };
+
     const value: InventoryContextType = {
         loading, errorMessage, inventoryItems, addInventoryItem, updateInventoryItem, deleteInventoryItem, updateMultipleInventoryItems,
         finishedProducts, fabricateProduct, recipes, saveRecipeAndProduct, deleteRecipeAndProduct, warehouses, transferProduct, receiveTransfer, cancelTransfer, saveWarehouse, deleteWarehouse,
         movements, sales, createSaleOrder, dispatchSaleOrder, cancelSaleOrder, collectConsignmentPayment, updateSale, customers, addCustomer, updateCustomer, deleteCustomer,
         routes, saveRoute, deleteRoute, marketProducts, saveMarketProduct, deleteMarketProduct, expenses, addExpense, updateExpense, deleteExpense, employees, addEmployee, updateEmployee, deleteEmployee,
         users, createUser, updateUser, deleteUser, updateUserLocation, suppliers, addSupplier, updateSupplier, deleteSupplier, purchaseOrders, savePurchaseOrder, receivePurchaseOrder, cancelPurchaseOrder,
-        paidPayrolls, processPayroll, productionLines, updateProductionLines, stockRequests, createStockRequest, updateStockRequestStatus,
+        paidPayrolls, processPayroll, productionLines, updateProductionLines, stockRequests, createStockRequest, updateStockRequestStatus, deleteStockRequest,
     };
 
     return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;
