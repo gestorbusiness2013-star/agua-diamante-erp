@@ -709,8 +709,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     const saveWarehouse = async (values: WarehouseFormValues, isEditMode: boolean, existingWarehouse: Warehouse | null) => {
         try {
-            if (isEditMode && existingWarehouse) await updateDoc(doc(db, 'warehouses', String(existingWarehouse.id)), { name: values.name });
-            else await addDoc(collection(db, 'warehouses'), { name: values.name, stock: [] });
+            if (isEditMode && existingWarehouse) {
+                await updateDoc(doc(db, 'warehouses', String(existingWarehouse.id)), { 
+                    name: values.name,
+                    address: values.address || '' 
+                });
+            } else {
+                await addDoc(collection(db, 'warehouses'), { 
+                    name: values.name, 
+                    address: values.address || '',
+                    stock: [] 
+                });
+            }
             toast({ title: "Almacén Guardado" });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error' });

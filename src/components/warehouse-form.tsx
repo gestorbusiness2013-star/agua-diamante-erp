@@ -18,6 +18,7 @@ import type { Warehouse } from '@/lib/inventory-data';
 
 const formSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
+  address: z.string().optional(),
 });
 
 export type WarehouseFormValues = z.infer<typeof formSchema>;
@@ -31,8 +32,9 @@ interface WarehouseFormProps {
 export function WarehouseForm({ initialData, onSubmit, onClose }: WarehouseFormProps) {
   const form = useForm<WarehouseFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
-      name: '',
+    defaultValues: {
+      name: initialData?.name || '',
+      address: initialData?.address || '',
     },
   });
 
@@ -47,6 +49,19 @@ export function WarehouseForm({ initialData, onSubmit, onClose }: WarehouseFormP
               <FormLabel>Nombre del Almacén</FormLabel>
               <FormControl>
                 <Input placeholder="e.g., Almacén Central" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Dirección o Ubicación (Opcional)</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., Av. Bolívar, Local 12, Valencia" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -2,6 +2,9 @@
 export type Route = {
     id: string; // Changed to string for Firestore
     name: string;
+    warehouseId?: string; // ID del almacén o punto de partida
+    warehouseName?: string; // Nombre del almacén de partida
+    startAddress?: string; // Dirección o punto geográfico de salida para el mapa
     customerIds: string[]; // Changed to string array
 };
 

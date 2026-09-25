@@ -28,6 +28,7 @@ export type WarehouseStockItem = {
 export type Warehouse = {
   id: string; // Changed to string for Firestore auto-ID
   name: string;
+  address?: string;
   stock: WarehouseStockItem[];
 };
 

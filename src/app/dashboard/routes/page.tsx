@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState } from "react";
-import { PlusCircle, Edit, Trash2, Map } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Map, Warehouse as WarehouseIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -21,9 +20,10 @@ import { useInventory } from "@/context/inventory-context";
 import { RouteForm, type RouteFormValues } from "@/components/route-form";
 import type { Route } from "@/lib/routes-data";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 export default function RoutesPage() {
-    const { routes, customers, saveRoute, deleteRoute } = useInventory();
+    const { routes, customers, saveRoute, deleteRoute, warehouses } = useInventory();
     const { toast } = useToast();
 
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -62,7 +62,18 @@ export default function RoutesPage() {
     };
     
     const generateMapUrl = (route: Route) => {
-        const companyAddress = "Agua Diamante, Guacara, Carabobo, Venezuela";
+        let originAddress = route.startAddress;
+        if (!originAddress && route.warehouseId) {
+            if (route.warehouseId === 'factory') {
+                originAddress = "Agua Diamante, Guacara, Carabobo, Venezuela";
+            } else {
+                const wh = warehouses.find(w => String(w.id) === String(route.warehouseId));
+                originAddress = wh?.address || wh?.name;
+            }
+        }
+        if (!originAddress) {
+            originAddress = route.warehouseName || "Agua Diamante, Guacara, Carabobo, Venezuela";
+        }
         
         const customerAddresses = route.customerIds
             .map(id => customers.find(c => String(c.id) === String(id)))
@@ -72,13 +83,13 @@ export default function RoutesPage() {
         if (customerAddresses.length === 0) {
             toast({
                 variant: 'destructive',
-                title: 'No hay clientes',
-                description: 'Esta ruta no tiene clientes con direcciones válidas para mostrar en el mapa.'
+                title: 'No hay clientes con dirección',
+                description: 'Esta ruta no tiene clientes con direcciones válidas para trazar la ruta en Google Maps.'
             });
             return '#';
         }
 
-        const origin = encodeURIComponent(companyAddress);
+        const origin = encodeURIComponent(originAddress);
         
         if (customerAddresses.length === 1) {
              return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${customerAddresses[0]}`;
@@ -98,7 +109,7 @@ export default function RoutesPage() {
                         <div>
                             <CardTitle className="font-headline">Gestión de Rutas de Venta</CardTitle>
                             <CardDescription>
-                                Organiza tus clientes en rutas y visualízalas en el mapa.
+                                Organiza tus clientes en rutas asignando el almacén de salida y visualízalas en Google Maps.
                             </CardDescription>
                         </div>
                         <Button onClick={() => handleOpenDialog()}>
@@ -111,19 +122,35 @@ export default function RoutesPage() {
                     <Accordion type="single" collapsible className="w-full">
                        {routes.map(route => {
                            const routeCustomers = route.customerIds.map(id => customers.find(c => String(c.id) === String(id))).filter(Boolean);
+                           const originLabel = route.warehouseName || 'Fábrica Principal';
+
                            return (
                                <AccordionItem value={`item-${route.id}`} key={route.id}>
                                    <div className="flex items-center w-full">
                                        <AccordionTrigger className="flex-1 hover:no-underline">
-                                           <div className="flex flex-col items-start text-left">
-                                                <span className="font-medium text-lg">{route.name}</span>
-                                                <span className="text-sm font-normal text-muted-foreground">{route.customerIds.length} cliente(s)</span>
+                                           <div className="flex flex-col items-start text-left gap-1">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-medium text-lg">{route.name}</span>
+                                                    <Badge variant="secondary" className="text-xs font-normal flex items-center gap-1 bg-muted">
+                                                        <WarehouseIcon className="h-3 w-3 text-muted-foreground" />
+                                                        Salida: {originLabel}
+                                                    </Badge>
+                                                </div>
+                                                <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                                                    <span>{route.customerIds.length} cliente(s)</span>
+                                                    {route.startAddress && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span className="italic">{route.startAddress}</span>
+                                                        </>
+                                                    )}
+                                                </div>
                                            </div>
                                        </AccordionTrigger>
                                        <div className="flex items-center gap-1 pr-4 shrink-0">
-                                            <Button asChild variant="outline" size="sm">
+                                            <Button asChild variant="outline" size="sm" className="gap-1.5">
                                                 <a href={generateMapUrl(route)} target="_blank" rel="noopener noreferrer">
-                                                    <Map className="mr-2 h-4 w-4"/>
+                                                    <Map className="h-4 w-4 text-primary"/>
                                                     Ver Ruta
                                                 </a>
                                             </Button>
@@ -141,7 +168,7 @@ export default function RoutesPage() {
                                        {routeCustomers.length > 0 ? (
                                             <ul className="list-disc pl-5 pt-2 space-y-1 text-muted-foreground">
                                                 {routeCustomers.map(customer => (
-                                                    customer && <li key={customer.id}>{customer.name} - <span className="italic">{customer.address}</span></li>
+                                                    customer && <li key={customer.id}>{customer.name} - <span className="italic">{customer.address || 'Sin dirección'}</span></li>
                                                 ))}
                                             </ul>
                                        ) : (
@@ -160,13 +187,14 @@ export default function RoutesPage() {
                     <DialogHeader>
                         <DialogTitle>{isEditMode ? 'Editar Ruta' : 'Crear Nueva Ruta'}</DialogTitle>
                         <DialogDescription>
-                            {isEditMode ? 'Actualiza el nombre y los clientes de la ruta.' : 'Define un nombre y asigna clientes a la nueva ruta.'}
+                            {isEditMode ? 'Actualiza el almacén de salida, el nombre y los clientes de la ruta.' : 'Selecciona primero el almacén de partida, asigna el nombre y los clientes.'}
                         </DialogDescription>
                     </DialogHeader>
                     <RouteForm
                         initialData={selectedRoute}
                         customers={customers}
                         routes={routes}
+                        warehouses={warehouses}
                         onSubmit={handleSubmit}
                         onClose={handleCloseDialog}
                     />
