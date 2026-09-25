@@ -25,6 +25,24 @@ import Image from 'next/image';
 import { VoiceAssistant } from '@/components/voice-assistant';
 import { useToast } from '@/hooks/use-toast';
 import { type UserPermissions, getDefaultPermissions } from '@/lib/users-data';
+import { cn } from '@/lib/utils';
+
+const navItems = [
+  { href: '/dashboard', label: 'Panel General', icon: Gauge, permission: 'panel' as const },
+  { href: '/dashboard/inventory', label: 'Inventario', icon: Archive, permission: 'inventory' as const },
+  { href: '/dashboard/suppliers', label: 'Proveedores', icon: Building, permission: 'suppliers' as const },
+  { href: '/dashboard/compras', label: 'Compras', icon: ShoppingCart, permission: 'purchases' as const },
+  { href: '/dashboard/customers', label: 'Clientes', icon: Briefcase, permission: 'customers' as const },
+  { href: '/dashboard/routes', label: 'Rutas de Venta', icon: Route, permission: 'routes' as const },
+  { href: '/dashboard/vendedores', label: 'Vendedores', icon: MapPinned, permission: 'vendedores' as const },
+  { href: '/dashboard/warehouses', label: 'Almacenes', icon: Warehouse, permission: 'warehouses' as const },
+  { href: '/dashboard/sales', label: 'Ventas', icon: ShoppingBag, permission: 'sales' as const },
+  { href: '/dashboard/production', label: 'Producción', icon: Factory, permission: 'production' as const },
+  { href: '/dashboard/movements', label: 'Movimientos', icon: ArrowRightLeft, permission: 'movements' as const },
+  { href: '/dashboard/market-analysis', label: 'Análisis de Mercado', icon: AreaChart, permission: 'market' as const },
+  { href: '/dashboard/users', label: 'Usuarios', icon: Users, permission: 'users' as const },
+  { href: '/dashboard/gastos', label: 'Gastos y Nómina', icon: Landmark, permission: 'expenses' as const },
+];
 
 const routePermissionMap: Record<string, keyof UserPermissions> = {
   '/dashboard': 'panel',
@@ -60,6 +78,11 @@ function DashboardLayoutContent({
       return getDefaultPermissions(currentUser.role)[key];
     }
     return currentUser.permissions[key] ?? false;
+  };
+
+  const isRouteActive = (route: string) => {
+    if (route === '/dashboard') return pathname === '/dashboard';
+    return pathname.startsWith(route);
   };
 
   // This effect's only job is to redirect if authentication is resolved and there's no user.
@@ -129,105 +152,38 @@ function DashboardLayoutContent({
           </Link>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarMenu>
-            {hasPermission('panel') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Panel General">
-                  <Link href="/dashboard"><Gauge /><span>Panel General</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('inventory') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Inventario">
-                  <Link href="/dashboard/inventory"><Archive /><span>Inventario</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('suppliers') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Proveedores">
-                  <Link href="/dashboard/suppliers"><Building /><span>Proveedores</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('purchases') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Compras">
-                  <Link href="/dashboard/compras"><ShoppingCart /><span>Compras</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('customers') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Clientes">
-                  <Link href="/dashboard/customers"><Briefcase /><span>Clientes</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('routes') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Rutas de Venta">
-                  <Link href="/dashboard/routes"><Route /><span>Rutas de Venta</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('vendedores') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Vendedores">
-                  <Link href="/dashboard/vendedores"><MapPinned /><span>Vendedores</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('warehouses') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Almacenes">
-                  <Link href="/dashboard/warehouses"><Warehouse /><span>Almacenes</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('sales') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Ventas">
-                  <Link href="/dashboard/sales"><ShoppingBag /><span>Ventas</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('production') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Producción">
-                  <Link href="/dashboard/production"><Factory /><span>Producción</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('movements') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Movimientos">
-                  <Link href="/dashboard/movements"><ArrowRightLeft /><span>Movimientos</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('market') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Análisis de Mercado">
-                  <Link href="/dashboard/market-analysis"><AreaChart /><span>Análisis de Mercado</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('users') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Usuarios">
-                  <Link href="/dashboard/users"><Users /><span>Usuarios</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-            {hasPermission('expenses') && (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Gastos">
-                  <Link href="/dashboard/gastos"><Landmark /><span>Gastos y Nómina</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
+          <SidebarMenu className="gap-1.5 px-1">
+            {navItems.map((item) => {
+              if (!hasPermission(item.permission)) return null;
+              const active = isRouteActive(item.href);
+              const Icon = item.icon;
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton 
+                    asChild 
+                    tooltip={item.label}
+                    isActive={active}
+                    className={cn(
+                      "transition-all duration-200 rounded-lg px-3 py-2.5 text-sm font-medium",
+                      active 
+                        ? "bg-blue-600 text-white font-bold shadow-md shadow-blue-950/40 hover:bg-blue-500 hover:text-white ring-1 ring-white/20" 
+                        : "text-white/75 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    <Link href={item.href} className="flex items-center gap-3 w-full">
+                      <Icon className={cn("h-4 w-4 shrink-0 transition-all", active ? "text-white scale-110" : "text-white/75")} />
+                      <span className="truncate">{item.label}</span>
+                      {active && (
+                        <span className="ml-auto flex h-2 w-2 relative shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+                        </span>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </SidebarContent>
       </Sidebar>
