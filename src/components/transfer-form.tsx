@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useEffect } from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -44,22 +45,38 @@ interface TransferFormProps {
   warehouses: Warehouse[];
   onSubmit: (values: TransferFormValues) => void;
   onClose: () => void;
+  initialData?: Partial<TransferFormValues>;
 }
 
-export function TransferForm({ finishedProducts, warehouses, onSubmit, onClose }: TransferFormProps) {
+export function TransferForm({ finishedProducts, warehouses, onSubmit, onClose, initialData }: TransferFormProps) {
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-        sourceId: 'factory',
-        productName: '',
-        quantity: 1,
-        warehouseId: '',
-        driverName: '',
-        driverId: '',
-        vehicleBrand: '',
-        vehiclePlate: '',
+        sourceId: initialData?.sourceId || 'factory',
+        productName: initialData?.productName || '',
+        quantity: initialData?.quantity || 1,
+        warehouseId: initialData?.warehouseId || '',
+        driverName: initialData?.driverName || '',
+        driverId: initialData?.driverId || '',
+        vehicleBrand: initialData?.vehicleBrand || '',
+        vehiclePlate: initialData?.vehiclePlate || '',
     },
   });
+
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        sourceId: initialData.sourceId || 'factory',
+        productName: initialData.productName || '',
+        quantity: initialData.quantity || 1,
+        warehouseId: initialData.warehouseId || '',
+        driverName: initialData.driverName || '',
+        driverId: initialData.driverId || '',
+        vehicleBrand: initialData.vehicleBrand || '',
+        vehiclePlate: initialData.vehiclePlate || '',
+      });
+    }
+  }, [initialData, form]);
 
   const selectedSourceId = form.watch('sourceId');
 
