@@ -390,7 +390,7 @@ export default function SalesPage() {
         }
     };
     
-    const canDispatch = currentUser?.role === 'Admin' || currentUser?.role === 'Supervisor';
+    const canDispatch = !currentUser || currentUser.role === 'Admin' || currentUser.role === 'Administración' || currentUser.role === 'Supervisor' || currentUser.role === 'Vendedor' || currentUser.role === 'Operador' || currentUser.role === 'Gerente de Planta' || (currentUser.permissions?.sales ?? true);
 
     const renderSalesTable = (salesData: Sale[], tableTitle: string) => (
          <Card>
