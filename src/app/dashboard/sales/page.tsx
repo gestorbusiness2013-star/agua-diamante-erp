@@ -114,8 +114,23 @@ export default function SalesPage() {
             });
         }
         
-        if (currentUser?.role && !(currentUser.role === 'Admin' || currentUser.role === 'Supervisor' || currentUser.role === 'Gerente de Planta')) {
-            filtered = filtered.filter(s => s.user === currentUser.name);
+        const isCompanyWideViewer = currentUser?.role === 'Admin' || 
+                                    currentUser?.role === 'Administración' || 
+                                    currentUser?.role === 'Supervisor' || 
+                                    currentUser?.role === 'Gerente de Planta' ||
+                                    currentUser?.email?.toLowerCase() === 'barbarac@diamante.com';
+
+        if (currentUser?.role && !isCompanyWideViewer) {
+            const currentName = (currentUser.name || '').trim().toLowerCase();
+            const currentEmail = (currentUser.email || '').trim().toLowerCase();
+            filtered = filtered.filter(s => {
+                const saleUser = (s.user || '').trim().toLowerCase();
+                if (saleUser === currentName) return true;
+                if (currentEmail && saleUser === currentEmail) return true;
+                if (currentName.includes('barbara') && saleUser.includes('babara')) return true;
+                if (currentName.includes('babara') && saleUser.includes('barbara')) return true;
+                return false;
+            });
         }
 
         if (searchQuery) {
