@@ -62,7 +62,7 @@ export function ProductionLines({ lines, setLines, finishedProducts }: Productio
         if (!dialogState.line) return;
 
         const updatedLines = lines.map(l => {
-             if (l.id !== dialogState.line!.id) return l;
+            if (l.id !== dialogState.line!.id) return l;
 
             const isStoppingProduction = newStatus === 'Inactiva' || newStatus === 'En Mantenimiento';
 

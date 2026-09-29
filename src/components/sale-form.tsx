@@ -42,8 +42,11 @@ const formSchema = z.object({
   customerName: z.string().min(1, 'El nombre del cliente es requerido.'),
   description: z.string().optional(),
   saleType: z.enum(['Directa', 'Consignación'], { required_error: 'Seleccione un tipo de venta.'}),
-  paymentMethod: z.enum(['Efectivo', 'Transferencia', 'Tarjeta'], { required_error: 'Seleccione un método de pago.' }),
+  paymentMethod: z.enum(['Efectivo', 'Transferencia', 'Pago Móvil', 'Punto de Venta', 'Tarjeta'], { required_error: 'Seleccione un método de pago.' }),
   documentType: z.enum(['Factura', 'Nota de Entrega'], { required_error: 'Seleccione un tipo de documento.' }),
+  referenceNumber: z.string().optional(),
+  partialPaymentAmount: z.coerce.number().min(0).optional(),
+  daysToPay: z.coerce.number().min(1).optional(),
 });
 
 export type SaleFormValues = z.infer<typeof formSchema>;
@@ -51,13 +54,14 @@ export type SaleFormValues = z.infer<typeof formSchema>;
 interface SaleFormProps {
   warehouses: Warehouse[];
   customers: Customer[];
-  onSubmit: (values: SaleFormValues) => void;
+  onSubmit: (values: SaleFormValues, receiptFile?: File | null) => void;
   onClose: () => void;
   initialData?: Sale | null;
 }
 
 export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData }: SaleFormProps) {
   const [availableProducts, setAvailableProducts] = useState<WarehouseStockItem[]>([]);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const isEditMode = !!initialData;
   
   const getInitialItems = () => {
@@ -79,6 +83,9 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
         saleType: initialData.saleType,
         paymentMethod: initialData.paymentMethod,
         documentType: initialData.documentType,
+        referenceNumber: initialData.referenceNumber || '',
+        partialPaymentAmount: initialData.partialPaymentAmount || 0,
+        daysToPay: 0, // daysToPay not stored directly, calculated from dueDate, but for edit maybe just keep 0 or calculate
     } : {
         warehouseId: '',
         items: [{ productName: '', quantity: 1, unitPrice: 0 }],
@@ -88,6 +95,9 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
         saleType: 'Directa',
         paymentMethod: 'Efectivo',
         documentType: 'Factura',
+        referenceNumber: '',
+        partialPaymentAmount: 0,
+        daysToPay: 7,
     },
   });
 
@@ -99,6 +109,12 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
   const selectedWarehouseId = form.watch('warehouseId');
   const selectedCustomerId = form.watch('customerId');
   const watchedItems = form.watch('items');
+  const paymentMethod = form.watch('paymentMethod');
+  const saleType = form.watch('saleType');
+  const partialPaymentAmount = form.watch('partialPaymentAmount') || 0;
+
+  const showPaymentInfo = saleType === 'Directa' || (saleType === 'Consignación' && partialPaymentAmount > 0);
+  const requiresReceipt = showPaymentInfo && ['Transferencia', 'Pago Móvil', 'Punto de Venta'].includes(paymentMethod);
 
   const totalAmount = useMemo(() => {
       return (watchedItems || []).reduce((sum, item) => {
@@ -132,9 +148,13 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
+  const handleSubmit = (values: SaleFormValues) => {
+    onSubmit(values, receiptFile);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2 max-h-[75vh] overflow-y-auto pr-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pt-2 max-h-[75vh] overflow-y-auto pr-4">
         
         <h4 className="text-sm font-medium pt-2 border-t">Información del Cliente</h4>
          <FormField
@@ -328,28 +348,97 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
             )}
         />
 
-        <FormField
-          control={form.control}
-          name="paymentMethod"
-          render={({ field }) => (
-              <FormItem>
-              <FormLabel>Método de Pago</FormLabel>
-               <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione un método" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                    <SelectItem value="Efectivo">Efectivo</SelectItem>
-                    <SelectItem value="Transferencia">Transferencia</SelectItem>
-                    <SelectItem value="Tarjeta">Tarjeta</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-              </FormItem>
-          )}
-        />
+        {saleType === 'Consignación' && (
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <FormField
+                    control={form.control}
+                    name="partialPaymentAmount"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Abono Inicial (USD)</FormLabel>
+                            <FormControl>
+                                <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="daysToPay"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Plazo (Días)</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="7" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+        )}
+
+        {showPaymentInfo && (
+            <FormField
+              control={form.control}
+              name="paymentMethod"
+              render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>Método de Pago</FormLabel>
+                   <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un método" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        <SelectItem value="Efectivo">Efectivo</SelectItem>
+                        <SelectItem value="Transferencia">Transferencia</SelectItem>
+                        <SelectItem value="Pago Móvil">Pago Móvil</SelectItem>
+                        <SelectItem value="Punto de Venta">Punto de Venta</SelectItem>
+                        <SelectItem value="Tarjeta">Tarjeta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                  </FormItem>
+              )}
+            />
+        )}
+
+        {requiresReceipt && (
+            <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                <h4 className="text-sm font-medium">Datos del Pago</h4>
+                <FormField
+                    control={form.control}
+                    name="referenceNumber"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Número de Referencia</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Ej. 12345678" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                
+                <FormItem>
+                    <FormLabel>Comprobante de Pago</FormLabel>
+                    <FormControl>
+                        <Input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={(e) => {
+                                const file = e.target.files?.[0] || null;
+                                setReceiptFile(file);
+                            }}
+                        />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground mt-1">Sube una imagen o toma una foto del comprobante.</p>
+                </FormItem>
+            </div>
+        )}
         
         <FormField
             control={form.control}

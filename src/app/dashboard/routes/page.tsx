@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useInventory } from "@/context/inventory-context";
@@ -60,7 +60,7 @@ export default function RoutesPage() {
             setRouteToDelete(null);
         }
     };
-    
+
     const generateMapUrl = (route: Route) => {
         let originAddress = route.startAddress;
         if (!originAddress && route.warehouseId) {
@@ -74,12 +74,12 @@ export default function RoutesPage() {
         if (!originAddress) {
             originAddress = route.warehouseName || "Agua Diamante, Guacara, Carabobo, Venezuela";
         }
-        
+
         const customerAddresses = route.customerIds
             .map(id => customers.find(c => String(c.id) === String(id)))
             .filter((c): c is NonNullable<typeof c> => !!c && !!c.address)
             .map(c => encodeURIComponent(c.address));
-        
+
         if (customerAddresses.length === 0) {
             toast({
                 variant: 'destructive',
@@ -90,14 +90,14 @@ export default function RoutesPage() {
         }
 
         const origin = encodeURIComponent(originAddress);
-        
+
         if (customerAddresses.length === 1) {
-             return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${customerAddresses[0]}`;
+            return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${customerAddresses[0]}`;
         }
-        
+
         const destination = customerAddresses.pop()!;
         const waypoints = customerAddresses.join('|');
-        
+
         return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}`;
     };
 
@@ -120,15 +120,15 @@ export default function RoutesPage() {
                 </CardHeader>
                 <CardContent>
                     <Accordion type="single" collapsible className="w-full">
-                       {routes.map(route => {
-                           const routeCustomers = route.customerIds.map(id => customers.find(c => String(c.id) === String(id))).filter(Boolean);
-                           const originLabel = route.warehouseName || 'Fábrica Principal';
+                        {routes.map(route => {
+                            const routeCustomers = route.customerIds.map(id => customers.find(c => String(c.id) === String(id))).filter(Boolean);
+                            const originLabel = route.warehouseName || 'Fábrica Principal';
 
-                           return (
-                               <AccordionItem value={`item-${route.id}`} key={route.id}>
-                                   <div className="flex items-center w-full">
-                                       <AccordionTrigger className="flex-1 hover:no-underline">
-                                           <div className="flex flex-col items-start text-left gap-1">
+                            return (
+                                <AccordionItem value={`item-${route.id}`} key={route.id}>
+                                    <div className="flex items-center w-full">
+                                        <AccordionTrigger className="flex-1 hover:no-underline">
+                                            <div className="flex flex-col items-start text-left gap-1">
                                                 <div className="flex items-center gap-2 flex-wrap">
                                                     <span className="font-medium text-lg">{route.name}</span>
                                                     <Badge variant="secondary" className="text-xs font-normal flex items-center gap-1 bg-muted">
@@ -145,39 +145,39 @@ export default function RoutesPage() {
                                                         </>
                                                     )}
                                                 </div>
-                                           </div>
-                                       </AccordionTrigger>
-                                       <div className="flex items-center gap-1 pr-4 shrink-0">
+                                            </div>
+                                        </AccordionTrigger>
+                                        <div className="flex items-center gap-1 pr-4 shrink-0">
                                             <Button asChild variant="outline" size="sm" className="gap-1.5">
                                                 <a href={generateMapUrl(route)} target="_blank" rel="noopener noreferrer">
-                                                    <Map className="h-4 w-4 text-primary"/>
+                                                    <Map className="h-4 w-4 text-primary" />
                                                     Ver Ruta
                                                 </a>
                                             </Button>
                                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(route)}>
-                                               <Edit className="h-4 w-4" />
-                                               <span className="sr-only">Editar ruta</span>
-                                           </Button>
-                                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleOpenDeleteDialog(route)}>
-                                               <Trash2 className="h-4 w-4" />
+                                                <Edit className="h-4 w-4" />
+                                                <span className="sr-only">Editar ruta</span>
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleOpenDeleteDialog(route)}>
+                                                <Trash2 className="h-4 w-4" />
                                                 <span className="sr-only">Eliminar ruta</span>
-                                           </Button>
-                                       </div>
-                                   </div>
-                                   <AccordionContent>
-                                       {routeCustomers.length > 0 ? (
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <AccordionContent>
+                                        {routeCustomers.length > 0 ? (
                                             <ul className="list-disc pl-5 pt-2 space-y-1 text-muted-foreground">
                                                 {routeCustomers.map(customer => (
                                                     customer && <li key={customer.id}>{customer.name} - <span className="italic">{customer.address || 'Sin dirección'}</span></li>
                                                 ))}
                                             </ul>
-                                       ) : (
-                                           <p className="text-sm text-muted-foreground px-4 py-2">Esta ruta no tiene clientes asignados.</p>
-                                       )}
-                                   </AccordionContent>
-                               </AccordionItem>
-                           )
-                       })}
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground px-4 py-2">Esta ruta no tiene clientes asignados.</p>
+                                        )}
+                                    </AccordionContent>
+                                </AccordionItem>
+                            )
+                        })}
                     </Accordion>
                 </CardContent>
             </Card>
@@ -204,14 +204,14 @@ export default function RoutesPage() {
             <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Esta acción no se puede deshacer. Esto eliminará permanentemente la ruta.
-                    </AlertDialogDescription>
+                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Esto eliminará permanentemente la ruta.
+                        </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

@@ -21,8 +21,9 @@ import type { ProductionLine } from '@/lib/data';
 import type { Supplier } from '@/lib/suppliers-data';
 import type { Route } from '@/lib/routes-data';
 import type { PurchaseOrder } from '@/lib/purchases-data';
-import { db, firebaseConfig } from '@/lib/firebase';
+import { db, firebaseConfig, storage } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch, Timestamp, runTransaction, query, getDoc, onSnapshot, addDoc, where, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { initializeAuth, createUserWithEmailAndPassword, signOut, inMemoryPersistence } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -60,10 +61,10 @@ interface InventoryContextType {
     movements: Movement[];
     
     sales: Sale[];
-    createSaleOrder: (values: SaleFormValues, currentUser: User) => Promise<void>;
+    createSaleOrder: (values: SaleFormValues, currentUser: User, receiptFile?: File | null) => Promise<void>;
     dispatchSaleOrder: (sale: Sale, currentUser: { name: string }) => Promise<Sale | null>;
     cancelSaleOrder: (sale: Sale, currentUser: { name: string }) => Promise<void>;
-    collectConsignmentPayment: (sale: Sale, currentUser: { name: string }) => Promise<void>;
+    collectConsignmentPayment: (sale: Sale, currentUser: { name: string }, paymentData?: { method: string, reference?: string, receiptFile?: File | null }) => Promise<void>;
     updateSale: (sale: Sale) => Promise<void>;
     
     customers: Customer[];
@@ -546,7 +547,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
     };
     
-    const createSaleOrder = async (values: SaleFormValues, currentUser: User) => {
+    const createSaleOrder = async (values: SaleFormValues, currentUser: User, receiptFile?: File | null) => {
         try {
             const warehouse = warehouses.find(w => String(w.id) === String(values.warehouseId));
             if (!warehouse) throw new Error("Almacén no encontrado.");
@@ -566,6 +567,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
             const newSaleRef = doc(collection(db, 'sales'));
             const invoiceNumber = `ORD-${newSaleRef.id.substring(0, 5).toUpperCase()}`;
+            
+            let receiptUrl = '';
+            if (receiptFile && (values.saleType === 'Directa' || values.partialPaymentAmount > 0)) {
+                const fileExtension = receiptFile.name.split('.').pop();
+                const storageRef = ref(storage, `receipts/${newSaleRef.id}.${fileExtension}`);
+                await uploadBytes(storageRef, receiptFile);
+                receiptUrl = await getDownloadURL(storageRef);
+            }
+
+            let dueDate = null;
+            if (values.saleType === 'Consignación' && values.daysToPay) {
+                const date = new Date(now);
+                date.setDate(date.getDate() + values.daysToPay);
+                dueDate = date;
+            }
     
             await setDoc(newSaleRef, {
                 warehouseId: values.warehouseId,
@@ -584,6 +600,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 invoiceNumber,
                 commissionRate: currentUser.commissionRate || null,
                 commissionAmount: commissionAmount,
+                referenceNumber: values.referenceNumber || '',
+                receiptUrl: receiptUrl,
+                partialPaymentAmount: values.saleType === 'Consignación' ? (values.partialPaymentAmount || 0) : 0,
+                dueDate: dueDate,
             });
             toast({ title: "Orden de Venta Creada" });
         } catch (error: any) {
@@ -648,9 +668,24 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const collectConsignmentPayment = async (saleToCollect: Sale, currentUser: { name: string }) => {
+    const collectConsignmentPayment = async (saleToCollect: Sale, currentUser: { name: string }, paymentData?: { method: string, reference?: string, receiptFile?: File | null }) => {
         try {
-            await updateDoc(doc(db, 'sales', saleToCollect.id), { status: 'Pagado' });
+            let finalReceiptUrl = '';
+            if (paymentData?.receiptFile) {
+                const fileExtension = paymentData.receiptFile.name.split('.').pop();
+                const storageRef = ref(storage, `receipts/${saleToCollect.id}_final.${fileExtension}`);
+                await uploadBytes(storageRef, paymentData.receiptFile);
+                finalReceiptUrl = await getDownloadURL(storageRef);
+            }
+
+            const updates: any = { status: 'Pagado' };
+            if (paymentData) {
+                updates.finalPaymentMethod = paymentData.method;
+                if (paymentData.reference) updates.finalReferenceNumber = paymentData.reference;
+                if (finalReceiptUrl) updates.finalReceiptUrl = finalReceiptUrl;
+            }
+
+            await updateDoc(doc(db, 'sales', saleToCollect.id), updates);
             toast({ title: "Pago Registrado" });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error al registrar pago' });

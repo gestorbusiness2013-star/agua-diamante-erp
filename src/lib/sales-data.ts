@@ -23,7 +23,7 @@ export type Sale = {
     customerId: string;
     totalAmount: number;
     saleType: 'Directa' | 'Consignación';
-    paymentMethod: 'Efectivo' | 'Transferencia' | 'Tarjeta';
+    paymentMethod: 'Efectivo' | 'Transferencia' | 'Pago Móvil' | 'Punto de Venta' | 'Tarjeta';
     documentType: 'Factura' | 'Nota de Entrega';
     invoiceNumber: string;
     user: string;
@@ -31,6 +31,13 @@ export type Sale = {
     status: 'Pendiente' | 'Despachado' | 'Por Cobrar' | 'Pagado' | 'Cancelado';
     commissionRate?: number | null;
     commissionAmount?: number | null;
+    referenceNumber?: string;
+    receiptUrl?: string;
+    partialPaymentAmount?: number;
+    dueDate?: Date;
+    finalPaymentMethod?: 'Efectivo' | 'Transferencia' | 'Pago Móvil' | 'Punto de Venta' | 'Tarjeta' | string;
+    finalReferenceNumber?: string;
+    finalReceiptUrl?: string;
 };
 
 /** Helper to get items from a sale, handling legacy format */

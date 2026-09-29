@@ -10,7 +10,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MoreHorizontal, PlusCircle, PackageCheck, AlertTriangle, DollarSign, Calendar as CalendarIcon, TrendingUp, Search, ShoppingCart, Activity, ShieldAlert, KeyRound, Lock, Loader2 } from "lucide-react";
+import { MoreHorizontal, PlusCircle, PackageCheck, AlertTriangle, DollarSign, Calendar as CalendarIcon, TrendingUp, Search, ShoppingCart, Activity, ShieldAlert, KeyRound, Lock, Loader2, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
 import {
   DropdownMenu,
@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { SaleForm, type SaleFormValues } from "@/components/sale-form";
+import { CollectPaymentDialog } from "@/components/collect-payment-dialog";
 import type { Sale } from "@/lib/sales-data";
 import { getSaleItems } from "@/lib/sales-data";
 import { useAuth } from "@/context/auth-context";
@@ -69,8 +70,10 @@ export default function SalesPage() {
     const [isClient, setIsClient] = useState(false);
     
     const [saleDialogOpen, setSaleDialogOpen] = useState(false);
-    const [alertDialog, setAlertDialog] = useState<{ open: boolean; type: 'dispatch' | 'cancel' | 'collect'; sale: Sale | null }>({ open: false, type: 'dispatch', sale: null });
+    const [alertDialog, setAlertDialog] = useState<{ open: boolean; type: 'dispatch' | 'cancel'; sale: Sale | null }>({ open: false, type: 'dispatch', sale: null });
     const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+    const [collectPaymentDialogOpen, setCollectPaymentDialogOpen] = useState(false);
+    const [saleToCollect, setSaleToCollect] = useState<Sale | null>(null);
     const [date, setDate] = useState<DateRange | undefined>();
     const [searchQuery, setSearchQuery] = useState("");
     const [dispatchedDate, setDispatchedDate] = useState<DateRange | undefined>(() => {
@@ -239,7 +242,7 @@ export default function SalesPage() {
     const pendingSales = useMemo(() => filteredSales.filter(s => s.status === 'Pendiente'), [filteredSales]);
     
     const dispatchedSales = useMemo(() => {
-        let list = userVisibleSales.filter(s => s.status === 'Despachado' || s.status === 'Pagado');
+        let list = userVisibleSales.filter(s => s.status === 'Despachado' || s.status === 'Pagado' || s.status === 'Por Cobrar');
 
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
@@ -295,6 +298,8 @@ export default function SalesPage() {
         setSaleDialogOpen(false);
         setAlertDialog({ open: false, type: 'dispatch', sale: null });
         setSelectedSale(null);
+        setCollectPaymentDialogOpen(false);
+        setSaleToCollect(null);
     };
 
     const handleSaleFormSubmit = async (values: SaleFormValues) => {
@@ -415,9 +420,9 @@ export default function SalesPage() {
         handleCloseDialogs();
     };
 
-    const handleCollectPayment = async () => {
-        if (alertDialog.sale && currentUser) {
-            await collectConsignmentPayment(alertDialog.sale, currentUser);
+    const handleCollectPaymentConfirm = async (paymentData: { method: string, reference?: string, receiptFile?: File | null }) => {
+        if (saleToCollect && currentUser) {
+            await collectConsignmentPayment(saleToCollect, currentUser, paymentData);
         }
         handleCloseDialogs();
     };
@@ -488,15 +493,28 @@ export default function SalesPage() {
         handleCloseDialogs();
     };
 
-    const getStatusBadge = (status: Sale['status']) => {
+    const getStatusBadge = (sale: Sale) => {
+        const status = sale.status;
+        const saleType = sale.saleType;
         const baseClasses = "capitalize";
-        switch (status) {
-            case 'Pendiente': return cn(baseClasses, "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100");
-            case 'Despachado': return cn(baseClasses, "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100");
-            case 'Por Cobrar': return cn(baseClasses, "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100");
-            case 'Pagado': return cn(baseClasses, "bg-green-100 text-green-800 border-green-200 hover:bg-green-100");
-            case 'Cancelado': return "destructive";
+
+        if (status === 'Pendiente') {
+            return { className: cn(baseClasses, "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100"), label: "Pendiente" };
         }
+        if (status === 'Por Cobrar') {
+            return { className: cn(baseClasses, "bg-red-100 text-red-800 border-red-200 hover:bg-red-100"), label: "Por Pagar" };
+        }
+        if (status === 'Despachado') {
+            const label = saleType === 'Consignación' ? "Consignación" : "Pago Parcial";
+            return { className: cn(baseClasses, "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100"), label: label };
+        }
+        if (status === 'Pagado') {
+            return { className: cn(baseClasses, "bg-green-100 text-green-800 border-green-200 hover:bg-green-100"), label: "Pagado" };
+        }
+        if (status === 'Cancelado') {
+            return { className: cn(baseClasses, "bg-red-100 text-red-800 border-red-200 hover:bg-red-100"), label: "Cancelado" };
+        }
+        return { className: baseClasses, label: status };
     };
     
     const canDispatch = !currentUser || currentUser.role === 'Admin' || currentUser.role === 'Administración' || currentUser.role === 'Supervisor' || currentUser.role === 'Vendedor' || currentUser.role === 'Operador' || currentUser.role === 'Gerente de Planta' || (currentUser.permissions?.sales ?? true);
@@ -531,6 +549,26 @@ export default function SalesPage() {
                                             <div className="text-sm text-muted-foreground">
                                                 {isClient ? format(new Date(sale.date), "dd/MM/yyyy", { locale: es }) : ''}
                                             </div>
+                                            {sale.dueDate && (
+                                                <div className="text-xs text-red-500 font-medium mt-1">
+                                                    Vence: {isClient ? format(new Date(sale.dueDate), "dd/MM/yyyy") : ''}
+                                                </div>
+                                            )}
+                                            {(!sale.dueDate && sale.paymentMethod) && (
+                                                <div className="text-xs text-muted-foreground mt-1 font-medium">
+                                                    {sale.paymentMethod} {sale.referenceNumber ? `(Ref: ${sale.referenceNumber})` : ''}
+                                                </div>
+                                            )}
+                                            {(sale.dueDate && sale.partialPaymentAmount && sale.partialPaymentAmount > 0) ? (
+                                                <div className="text-xs text-muted-foreground mt-1 font-medium">
+                                                    {sale.paymentMethod} {sale.referenceNumber ? `(Ref: ${sale.referenceNumber})` : ''}
+                                                </div>
+                                            ) : null}
+                                            {sale.finalPaymentMethod && (
+                                                <div className="text-xs text-emerald-600 mt-1 font-medium">
+                                                    Pago Final: {sale.finalPaymentMethod} {sale.finalReferenceNumber ? `(Ref: ${sale.finalReferenceNumber})` : ''}
+                                                </div>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <div>{sale.customerName}</div>
@@ -561,13 +599,21 @@ export default function SalesPage() {
                                                 );
                                             })()}
                                         </TableCell>
-                                        <TableCell className="hidden sm:table-cell text-right font-mono">{formatCurrency(sale.totalAmount)}</TableCell>
+                                        <TableCell className="hidden sm:table-cell text-right font-mono">
+                                            <div>{formatCurrency(sale.totalAmount)}</div>
+                                            {sale.partialPaymentAmount ? (
+                                                <div className="text-xs text-muted-foreground mt-1">Abono: {formatCurrency(sale.partialPaymentAmount)}</div>
+                                            ) : null}
+                                            {sale.partialPaymentAmount ? (
+                                                <div className="text-xs text-red-500 font-medium">Resta: {formatCurrency(sale.totalAmount - sale.partialPaymentAmount)}</div>
+                                            ) : null}
+                                        </TableCell>
                                         <TableCell className="hidden lg:table-cell text-right font-mono text-emerald-500">
                                             {sale.commissionAmount ? formatCurrency(sale.commissionAmount) : <span className="text-muted-foreground">-</span>}
                                         </TableCell>
                                         <TableCell className="hidden md:table-cell">
-                                            <Badge variant={getStatusBadge(sale.status) === 'destructive' ? 'destructive' : 'secondary'} className={getStatusBadge(sale.status)}>
-                                                {sale.status}
+                                            <Badge className={getStatusBadge(sale).className}>
+                                                {getStatusBadge(sale).label}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>{sale.user}</TableCell>
@@ -576,8 +622,10 @@ export default function SalesPage() {
                                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                    {sale.receiptUrl && <DropdownMenuItem onClick={() => window.open(sale.receiptUrl, '_blank')}><FileText className="mr-2 h-4 w-4"/>Ver Comprobante Abono</DropdownMenuItem>}
+                                                    {sale.finalReceiptUrl && <DropdownMenuItem onClick={() => window.open(sale.finalReceiptUrl, '_blank')}><FileText className="mr-2 h-4 w-4"/>Ver Comprobante Final</DropdownMenuItem>}
                                                     {sale.status === 'Pendiente' && canDispatch && <DropdownMenuItem onClick={() => setAlertDialog({ open: true, type: 'dispatch', sale })}><PackageCheck className="mr-2 h-4 w-4"/>Despachar</DropdownMenuItem>}
-                                                    {sale.status === 'Por Cobrar' && <DropdownMenuItem onClick={() => setAlertDialog({ open: true, type: 'collect', sale })}><DollarSign className="mr-2 h-4 w-4"/>Registrar Pago</DropdownMenuItem>}
+                                                    {sale.status === 'Por Cobrar' && <DropdownMenuItem onClick={() => { setSaleToCollect(sale); setCollectPaymentDialogOpen(true); }}><DollarSign className="mr-2 h-4 w-4"/>Registrar Pago Final</DropdownMenuItem>}
                                                     {sale.status === 'Pendiente' && <DropdownMenuItem onClick={() => handleOpenEditDialog(sale)}>Editar</DropdownMenuItem>}
                                                     {sale.status !== 'Cancelado' && <DropdownMenuItem onClick={() => handleRequestCancel(sale)} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><AlertTriangle className="mr-2 h-4 w-4"/>Anular Orden</DropdownMenuItem>}
                                                 </DropdownMenuContent>
@@ -723,14 +771,12 @@ export default function SalesPage() {
             </div>
 
             <Tabs defaultValue="pending">
-                <TabsList className="grid w-full grid-cols-4 mb-4">
+                <TabsList className="grid w-full grid-cols-3 mb-4">
                     <TabsTrigger value="pending">Pendientes</TabsTrigger>
-                    <TabsTrigger value="consignment">Por Cobrar</TabsTrigger>
-                    <TabsTrigger value="dispatched">Despachadas/Pagas</TabsTrigger>
+                    <TabsTrigger value="dispatched">Despachados</TabsTrigger>
                     <TabsTrigger value="cancelled">Canceladas</TabsTrigger>
                 </TabsList>
                 <TabsContent value="pending" className="mt-4">{renderSalesTable(pendingSales, 'Pendientes')}</TabsContent>
-                <TabsContent value="consignment" className="mt-4">{renderSalesTable(consignmentSales, 'Por Cobrar')}</TabsContent>
                 <TabsContent value="dispatched" className="mt-4 space-y-4">
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 p-3.5 rounded-xl border bg-muted/40 shadow-xs">
                         <div className="flex items-center gap-2.5">
@@ -861,19 +907,24 @@ export default function SalesPage() {
                         <AlertDialogDescription>
                            {alertDialog.type === 'dispatch' && 'Esta acción despachará la orden, descontará el stock del almacén y generará el documento de venta.'}
                            {alertDialog.type === 'cancel' && `Esta acción anulará la orden ${alertDialog.sale?.invoiceNumber}, restaurará el stock si fue despachada y registrará el evento de forma inalterable.`}
-                           {alertDialog.type === 'collect' && `Esto marcará la orden ${alertDialog.sale?.invoiceNumber} como Pagada.`}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={handleCloseDialogs}>No, volver</AlertDialogCancel>
-                        <AlertDialogAction onClick={alertDialog.type === 'dispatch' ? handleDispatch : alertDialog.type === 'collect' ? handleCollectPayment : handleCancel}>
+                        <AlertDialogAction onClick={alertDialog.type === 'dispatch' ? handleDispatch : handleCancel}>
                            {alertDialog.type === 'dispatch' && 'Sí, Despachar'}
-                           {alertDialog.type === 'collect' && 'Sí, Registrar Pago'}
                            {alertDialog.type === 'cancel' && 'Sí, Anular'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <CollectPaymentDialog
+                open={collectPaymentDialogOpen}
+                onOpenChange={setCollectPaymentDialogOpen}
+                sale={saleToCollect}
+                onConfirm={handleCollectPaymentConfirm}
+            />
 
             {/* Modal de Autorización de Administrador para Anulación por Vendedores */}
             <Dialog 
