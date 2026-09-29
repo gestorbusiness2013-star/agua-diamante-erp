@@ -698,7 +698,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             await runTransaction(db, async (transaction) => {
                 const saleRef = doc(db, 'sales', sale.id);
                 const wasDispatched = ['Despachado', 'Por Cobrar', 'Pagado'].includes(sale.status);
+                const warehouseRef = doc(db, 'warehouses', String(sale.warehouseId));
+                
+                // --- READS ---
+                let warehouseDoc = null;
+                if (wasDispatched) {
+                     warehouseDoc = await transaction.get(warehouseRef);
+                     if (!warehouseDoc.exists()) throw new Error("Almacén no encontrado.");
+                }
 
+                // --- WRITES ---
                 transaction.update(saleRef, { status: 'Cancelado' });
 
                 const productSummary = saleItems.map(i => `${i.productName} x${i.quantity}`).join(', ');
@@ -713,10 +722,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                     status: 'Completado'
                 });
 
-                if (wasDispatched) {
-                     const warehouseRef = doc(db, 'warehouses', String(sale.warehouseId));
-                     const warehouseDoc = await transaction.get(warehouseRef);
-                     if (!warehouseDoc.exists()) throw new Error("Almacén no encontrado.");
+                if (wasDispatched && warehouseDoc) {
                      const newStock = [...warehouseDoc.data().stock];
                      for (const item of saleItems) {
                          const idx = newStock.findIndex(s => s.productName === item.productName);
