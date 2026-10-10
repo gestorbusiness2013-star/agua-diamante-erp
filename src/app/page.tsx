@@ -34,9 +34,6 @@ export default function LandingPage() {
             <a href="#nosotros">Nosotros</a>
             <a href="#calidad">Calidad</a>
             <a href="#contacto">Contacto</a>
-            <Link href="/login" className="diamante-btn-erp">
-              Acceder al ERP →
-            </Link>
           </div>
         </div>
       </nav>
@@ -76,9 +73,6 @@ export default function LandingPage() {
             <a href="#nosotros" className="diamante-btn-primary">
               Conocer más
             </a>
-            <Link href="/login" className="diamante-btn-outline">
-              Portal ERP →
-            </Link>
           </div>
         </div>
 
@@ -131,9 +125,6 @@ export default function LandingPage() {
               Nuestro compromiso es entregar salud, frescura y pureza a cada
               hogar y empresa que confía en nuestra marca.
             </p>
-            <Link href="/login" className="diamante-btn-primary" style={{ display: 'inline-flex', marginTop: '1.5rem' }}>
-              Acceder al Sistema ERP →
-            </Link>
           </div>
           <div className="diamante-about-visual">
             <div className="diamante-water-bottle-card">
@@ -181,18 +172,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA ERP ── */}
+      {/* ── CONTACTO ── */}
       <section className="diamante-erp-cta" id="contacto">
         <div className="diamante-container diamante-erp-cta-inner">
           <div className="diamante-erp-cta-glow" />
-          <h2 className="diamante-erp-title">¿Eres parte del equipo Diamante?</h2>
+          <h2 className="diamante-erp-title">Contacto & Distribución</h2>
           <p className="diamante-erp-subtitle">
-            Accede al sistema de gestión empresarial para administrar inventario,
-            ventas, rutas de distribución y mucho más.
+            ¿Tienes preguntas o deseas solicitar despachos de Agua Diamante?
+            Ponte en contacto con nuestro equipo de atención al cliente.
           </p>
-          <Link href="/login" className="diamante-btn-primary diamante-btn-large">
-            💎 Ingresar al ERP
-          </Link>
         </div>
       </section>
 
@@ -206,7 +194,9 @@ export default function LandingPage() {
           <p className="diamante-footer-copy">
             © {new Date().getFullYear()} Agua Diamante. Todos los derechos reservados.
           </p>
-          <Link href="/login" className="diamante-footer-link">Portal ERP →</Link>
+          <Link href="/login" className="diamante-footer-link">
+            Acceder al ERP →
+          </Link>
         </div>
       </footer>
 
