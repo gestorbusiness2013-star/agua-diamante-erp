@@ -569,7 +569,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             const invoiceNumber = `ORD-${newSaleRef.id.substring(0, 5).toUpperCase()}`;
             
             let receiptUrl = '';
-            if (receiptFile && (values.saleType === 'Directa' || values.partialPaymentAmount > 0)) {
+            if (receiptFile && (values.saleType === 'Directa' || ((values.partialPaymentAmount ?? 0) > 0))) {
                 const fileExtension = receiptFile.name.split('.').pop();
                 const storageRef = ref(storage, `receipts/${newSaleRef.id}.${fileExtension}`);
                 await uploadBytes(storageRef, receiptFile);

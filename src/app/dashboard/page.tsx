@@ -2,14 +2,27 @@
 "use client";
 
 import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Factory, Package, Droplets, Warehouse } from "lucide-react";
+import { Factory, Package, Droplets, Warehouse, Waves } from "lucide-react";
 import { useInventory } from "@/context/inventory-context";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FactoryFloorSimulation } from "@/components/factory-floor-simulation";
+
+/**
+ * Returns true for items measured in volume (litros, m³, galones, etc.)
+ * These represent water/liquid sources and should NOT be counted as discrete units.
+ */
+function isVolumeItem(item: { unit?: string; name?: string }): boolean {
+  const unit = (item.unit ?? '').toLowerCase().trim();
+  const name = (item.name ?? '').toLowerCase();
+  const volumeUnits = ['litro', 'litros', 'lts', 'lt', 'l', 'm3', 'm³', 'galon', 'galones', 'gal'];
+  const waterKeywords = ['agua', 'pozo', 'cisterna', 'cruda', 'tratada'];
+  return (
+    volumeUnits.some((u) => unit === u || unit.startsWith(u)) ||
+    waterKeywords.some((k) => name.includes(k))
+  );
+}
 
 export default function DashboardPage() {
   const { productionLines, inventoryItems, finishedProducts, movements, warehouses } = useInventory();
@@ -22,12 +35,22 @@ export default function DashboardPage() {
   }, [productionLines]);
 
   const rawMaterialStats = useMemo(() => {
-    const totalUnits = inventoryItems.reduce((sum, item) => {
+    // Only count discrete supply items (preformas, tapas, etiquetas, cartón, etc.)
+    const dryItems = inventoryItems.filter((item) => !isVolumeItem(item));
+    const volumeItems = inventoryItems.filter((item) => isVolumeItem(item));
+
+    const totalUnits = dryItems.reduce((sum, item) => {
       const quantity = Number(String(item.quantity).replace(/\./g, '').replace(',', '.'));
       return sum + (isNaN(quantity) ? 0 : quantity);
     }, 0);
-    const lowStockAlerts = inventoryItems.filter(item => item.status === 'Stock Bajo').length;
-    return { totalUnits, lowStockAlerts };
+    const lowStockAlerts = dryItems.filter((item) => item.status === 'Stock Bajo').length;
+
+    const totalVolumeL = volumeItems.reduce((sum, item) => {
+      const quantity = Number(String(item.quantity).replace(/\./g, '').replace(',', '.'));
+      return sum + (isNaN(quantity) ? 0 : quantity);
+    }, 0);
+
+    return { totalUnits, lowStockAlerts, totalVolumeL, dryItems, volumeItems };
   }, [inventoryItems]);
 
   const finishedProductStats = useMemo(() => {
@@ -42,7 +65,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Producción Activa</CardTitle>
@@ -53,23 +76,48 @@ export default function DashboardPage() {
               {productionStats.activeLines} de {productionStats.totalLines} Líneas
             </div>
             <p className="text-xs text-muted-foreground">
-              {productionStats.capacityPercentage}% de capacidad de producción activa
+              {productionStats.capacityPercentage}% de capacidad activa
             </p>
             <Progress value={productionStats.capacityPercentage} className="mt-4" />
           </CardContent>
         </Card>
 
+        {/* ── Insumos secos (preformas, tapas, etc.) ── */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inventario de Materia Prima</CardTitle>
+            <CardTitle className="text-sm font-medium">Insumos de Materia Prima</CardTitle>
             <Droplets className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {rawMaterialStats.totalUnits.toLocaleString('es-ES')} Unidades
+              {rawMaterialStats.totalUnits.toLocaleString('es-ES')}
+              <span className="text-sm font-normal text-muted-foreground ml-1">unidades</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              {rawMaterialStats.lowStockAlerts} alertas de stock bajo activas.
+              {rawMaterialStats.dryItems.length} tipos · {rawMaterialStats.lowStockAlerts} alertas de stock bajo
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* ── Volumen de agua (litros) ── */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Agua de Proceso</CardTitle>
+            <Waves className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {rawMaterialStats.totalVolumeL >= 1_000_000
+                ? `${(rawMaterialStats.totalVolumeL / 1_000_000).toFixed(1)}M`
+                : rawMaterialStats.totalVolumeL >= 1_000
+                  ? `${(rawMaterialStats.totalVolumeL / 1_000).toFixed(1)}k`
+                  : rawMaterialStats.totalVolumeL.toLocaleString('es-ES')}
+              <span className="text-sm font-normal text-muted-foreground ml-1">lts</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {rawMaterialStats.volumeItems.length > 0
+                ? rawMaterialStats.volumeItems.map((i) => i.name).join(', ')
+                : 'Sin fuentes de agua registradas'}
             </p>
           </CardContent>
         </Card>
@@ -81,7 +129,8 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {finishedProductStats.totalUnits.toLocaleString('es-ES')} Unidades
+              {finishedProductStats.totalUnits.toLocaleString('es-ES')}
+              <span className="text-sm font-normal text-muted-foreground ml-1">unidades</span>
             </div>
             <p className="text-xs text-muted-foreground">
               Stock listo para transferir a almacenes.
@@ -105,7 +154,8 @@ export default function DashboardPage() {
         <CardContent>
           <FactoryFloorSimulation
             productionLines={productionLines}
-            inventoryItems={inventoryItems}
+            inventoryItems={rawMaterialStats.dryItems}
+            volumeItems={rawMaterialStats.volumeItems}
             finishedProducts={finishedProducts}
           />
         </CardContent>

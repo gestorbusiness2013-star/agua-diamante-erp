@@ -1,24 +1,25 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Package, Droplets, Truck, ArrowRight, Activity, Pause, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Package, Droplets, Truck, ArrowRight, Activity, Pause, ChevronRight, Waves } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface ProductionLine {
-  id: string;
+  id: string | number;
   name: string;
   status: string;
 }
 
 interface InventoryItem {
-  id: string;
+  id: string | number;
   name: string;
   quantity: number | string;
   status: string;
+  unit?: string;
 }
 
 interface FinishedProduct {
-  id: string;
+  id: string | number;
   name: string;
   quantity: number;
   zone: string;
@@ -27,6 +28,7 @@ interface FinishedProduct {
 interface FactoryFloorSimulationProps {
   productionLines: ProductionLine[];
   inventoryItems: InventoryItem[];
+  volumeItems?: InventoryItem[];
   finishedProducts: FinishedProduct[];
 }
 
@@ -35,9 +37,24 @@ type TooltipData = {
   lines: { label: string; value: string; alert?: boolean }[];
 } | null;
 
+/**
+ * Returns true for items measured in volume (litros, m³, galones, etc.)
+ */
+function isVolumeItem(item: { unit?: string; name?: string }): boolean {
+  const unit = (item.unit ?? '').toLowerCase().trim();
+  const name = (item.name ?? '').toLowerCase();
+  const volumeUnits = ['litro', 'litros', 'lts', 'lt', 'l', 'm3', 'm³', 'galon', 'galones', 'gal'];
+  const waterKeywords = ['agua', 'pozo', 'cisterna', 'cruda', 'tratada'];
+  return (
+    volumeUnits.some((u) => unit === u || unit.startsWith(u)) ||
+    waterKeywords.some((k) => name.includes(k))
+  );
+}
+
 export function FactoryFloorSimulation({
   productionLines,
   inventoryItems,
+  volumeItems,
   finishedProducts,
 }: FactoryFloorSimulationProps) {
   const [tooltip, setTooltip] = useState<TooltipData>(null);
@@ -47,15 +64,48 @@ export function FactoryFloorSimulation({
   const activeLines = productionLines.filter((l) => l.status === 'Activa');
   const pausedLines = productionLines.filter((l) => l.status !== 'Activa');
 
+  // Dry inventory only (preformas, tapas, envases, etc.)
+  const dryItems = useMemo(
+    () => inventoryItems.filter((i) => !isVolumeItem(i)),
+    [inventoryItems]
+  );
+
+  // Volume inventory (agua de pozo, etc.)
+  const volumeList = useMemo(() => {
+    const fromProps = volumeItems ?? [];
+    const fromInv = inventoryItems.filter((i) => isVolumeItem(i));
+    const combined = [...fromProps, ...fromInv];
+    return combined.filter(
+      (item, idx, arr) => arr.findIndex((t) => t.id === item.id || t.name === item.name) === idx
+    );
+  }, [inventoryItems, volumeItems]);
+
+  const totalVolumeL = useMemo(() => {
+    return volumeList.reduce((sum, item) => {
+      const q = Number(String(item.quantity).replace(/\./g, '').replace(',', '.'));
+      return sum + (isNaN(q) ? 0 : q);
+    }, 0);
+  }, [volumeList]);
+
+  const formattedVolume = useMemo(() => {
+    if (totalVolumeL >= 1_000_000) {
+      return `${(totalVolumeL / 1_000_000).toFixed(1)}M Lts`;
+    }
+    if (totalVolumeL >= 1_000) {
+      return `${(totalVolumeL / 1_000).toFixed(1)}k Lts`;
+    }
+    return `${totalVolumeL.toLocaleString('es-ES')} Lts`;
+  }, [totalVolumeL]);
+
   const totalRaw = useMemo(
     () =>
-      inventoryItems.reduce((sum, item) => {
+      dryItems.reduce((sum, item) => {
         const q = Number(String(item.quantity).replace(/\./g, '').replace(',', '.'));
         return sum + (isNaN(q) ? 0 : q);
       }, 0),
-    [inventoryItems]
+    [dryItems]
   );
-  const lowStockItems = inventoryItems.filter((i) => i.status === 'Stock Bajo');
+  const lowStockItems = dryItems.filter((i) => i.status === 'Stock Bajo');
 
   const zoneA = finishedProducts.filter((p) => p.zone === 'A' || p.zone?.includes('A'));
   const zoneD = finishedProducts.filter((p) => p.zone === 'D' || p.zone?.includes('D'));
@@ -100,69 +150,115 @@ export function FactoryFloorSimulation({
       )}
 
       {/* ── Layout: Exterior + Galpón ── */}
-      <div className="flex flex-col lg:flex-row gap-3 min-h-[420px]">
+      <div className="flex flex-col lg:flex-row gap-3 min-h-[440px]">
 
-        {/* ═══ EXTERIOR IZQUIERDO – Cisterna ═══ */}
-        <div
-          className="flex flex-col items-center justify-center gap-3 lg:w-[160px] shrink-0
-                     rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 cursor-pointer
-                     hover:border-blue-400/60 hover:bg-blue-950/20 transition-all group"
-          onMouseEnter={(e) =>
-            showTooltip(e, {
-              title: 'Bahía Zona D – Cisternas',
-              lines: [
-                { label: 'Agua cisterna', value: `${totalZoneD.toLocaleString('es-ES')} un.` },
-                { label: 'Estado', value: 'En operación' },
-                { label: 'Producto', value: zoneD[0]?.name ?? '—' },
-              ],
-            })
-          }
-          onMouseMove={moveTooltip}
-          onMouseLeave={hideTooltip}
-        >
-          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-1">
-            Exterior
+        {/* ═══ EXTERIOR IZQUIERDO – Cisterna & Pozo ═══ */}
+        <div className="flex flex-col gap-3 lg:w-[170px] shrink-0">
+          {/* Bahía Zona D – Cisternas */}
+          <div
+            className="flex flex-col items-center justify-center gap-2 flex-1
+                       rounded-2xl border border-dashed border-border/60 bg-muted/20 p-3 cursor-pointer
+                       hover:border-blue-400/60 hover:bg-blue-950/20 transition-all group"
+            onMouseEnter={(e) =>
+              showTooltip(e, {
+                title: 'Bahía Zona D – Cisternas',
+                lines: [
+                  { label: 'Agua cisterna', value: `${totalZoneD.toLocaleString('es-ES')} un.` },
+                  { label: 'Estado', value: 'En operación' },
+                  { label: 'Producto', value: zoneD[0]?.name ?? '—' },
+                ],
+              })
+            }
+            onMouseMove={moveTooltip}
+            onMouseLeave={hideTooltip}
+          >
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-0.5">
+              Exterior · Zona D
+            </div>
+
+            {/* Camión esquemático */}
+            <div className="relative flex flex-col items-center gap-1">
+              {/* Cabina */}
+              <div className="w-12 h-8 rounded-tl-xl rounded-tr-md rounded-bl-sm rounded-br-sm
+                              bg-gradient-to-b from-blue-600 to-blue-700 border border-blue-500/50
+                              flex items-center justify-center shadow-lg shadow-blue-900/40">
+                <Truck className="h-3.5 w-3.5 text-white" />
+              </div>
+              {/* Cisterna */}
+              <div className="w-16 h-6 rounded-full bg-gradient-to-b from-slate-400 to-slate-600
+                              border border-slate-300/40 shadow-inner flex items-center justify-center">
+                <span className="text-[8px] font-bold text-white/80 tracking-wide">CISTERNA</span>
+              </div>
+              {/* Manguera animada */}
+              <div className="flex items-center gap-0.5 mt-0.5">
+                <div className="w-5 h-1 rounded-full bg-blue-400/70 animate-pulse" />
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-300 animate-bounce" />
+              </div>
+              {/* Ruedas */}
+              <div className="flex gap-5 -mt-1">
+                <div className="w-3.5 h-3.5 rounded-full bg-gray-800 border-2 border-gray-500" />
+                <div className="w-3.5 h-3.5 rounded-full bg-gray-800 border-2 border-gray-500" />
+              </div>
+            </div>
+
+            {/* Métrica */}
+            <div className="mt-1 text-center">
+              <div className="text-xs font-bold text-blue-300 font-mono">{totalZoneD.toLocaleString('es-ES')}</div>
+              <div className="text-[9px] text-muted-foreground">un. agua cisterna</div>
+              <Badge variant="outline" className="mt-1 text-[9px] py-0 px-1.5 border-blue-500/40 text-blue-400">
+                Zona D
+              </Badge>
+            </div>
           </div>
 
-          {/* Camión esquemático */}
-          <div className="relative flex flex-col items-center gap-1">
-            {/* Cabina */}
-            <div className="w-14 h-9 rounded-tl-xl rounded-tr-md rounded-bl-sm rounded-br-sm
-                            bg-gradient-to-b from-blue-600 to-blue-700 border border-blue-500/50
-                            flex items-center justify-center shadow-lg shadow-blue-900/40">
-              <Truck className="h-4 w-4 text-white" />
+          {/* Pozo & Planta de Tratamiento */}
+          <div
+            className="flex flex-col items-center justify-center gap-2 flex-1
+                       rounded-2xl border border-dashed border-cyan-500/30 bg-cyan-950/20 p-3 cursor-pointer
+                       hover:border-cyan-400/60 hover:bg-cyan-950/40 transition-all group"
+            onMouseEnter={(e) =>
+              showTooltip(e, {
+                title: 'Pozo & Planta de Tratamiento',
+                lines: [
+                  { label: 'Volumen total', value: `${totalVolumeL.toLocaleString('es-ES')} Lts` },
+                  { label: 'Estado', value: '🟢 Nivel Óptimo' },
+                  { label: 'Fuentes', value: volumeList.length > 0 ? volumeList.map((i) => i.name).join(', ') : 'Agua de Pozo' },
+                  { label: 'Destino', value: 'Alimentación a líneas' },
+                ],
+              })
+            }
+            onMouseMove={moveTooltip}
+            onMouseLeave={hideTooltip}
+          >
+            <div className="text-[10px] font-bold uppercase tracking-widest text-cyan-400/80 flex items-center gap-1">
+              <Waves className="h-3 w-3" />
+              Pozo & Filtros
             </div>
-            {/* Cisterna */}
-            <div className="w-20 h-7 rounded-full bg-gradient-to-b from-slate-400 to-slate-600
-                            border border-slate-300/40 shadow-inner flex items-center justify-center">
-              <span className="text-[9px] font-bold text-white/80 tracking-wide">CISTERNA</span>
-            </div>
-            {/* Manguera animada */}
-            <div className="flex items-center gap-0.5 mt-1">
-              <div className="w-6 h-1 rounded-full bg-blue-400/70 animate-pulse" />
-              <div className="w-2 h-2 rounded-full bg-blue-300 animate-bounce" />
-            </div>
-            {/* Ruedas */}
-            <div className="flex gap-6 -mt-1">
-              <div className="w-4 h-4 rounded-full bg-gray-800 border-2 border-gray-500" />
-              <div className="w-4 h-4 rounded-full bg-gray-800 border-2 border-gray-500" />
-            </div>
-          </div>
 
-          {/* Métrica */}
-          <div className="mt-2 text-center">
-            <div className="text-xs font-bold text-blue-300 font-mono">{totalZoneD.toLocaleString('es-ES')}</div>
-            <div className="text-[9px] text-muted-foreground mt-0.5">un. agua cisterna</div>
-            <Badge variant="outline" className="mt-1 text-[9px] py-0 px-1.5 border-blue-500/40 text-blue-400">
-              Zona D
-            </Badge>
-          </div>
+            {/* Tanque cilíndrico esquemático con agua animada */}
+            <div className="relative w-14 h-14 rounded-xl border-2 border-cyan-400/50 bg-slate-900/90 overflow-hidden shadow-inner flex flex-col justify-end">
+              <div
+                className="w-full bg-gradient-to-t from-cyan-600 to-cyan-400/80 relative"
+                style={{ height: '75%' }}
+              >
+                <div
+                  className="absolute inset-x-0 top-0 h-1 bg-cyan-200/80"
+                  style={{ animation: 'waterWave 2s ease-in-out infinite alternate' }}
+                />
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-[8px] font-bold text-white drop-shadow">POZO</span>
+              </div>
+            </div>
 
-          {/* Flecha hacia interior */}
-          <div className="hidden lg:block mt-2">
-            <div className="flex items-center gap-1 text-muted-foreground/40 text-[9px]">
-              <span>despacho</span>
-              <ArrowRight className="h-3 w-3" />
+            {/* Métrica volumen */}
+            <div className="text-center">
+              <div className="text-xs font-bold text-cyan-300 font-mono">
+                {formattedVolume}
+              </div>
+              <Badge variant="outline" className="mt-1 text-[9px] py-0 px-1.5 border-cyan-500/40 text-cyan-300 bg-cyan-950/50">
+                Nivel Óptimo
+              </Badge>
             </div>
           </div>
         </div>
@@ -382,7 +478,7 @@ export function FactoryFloorSimulation({
             >
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Droplets className="h-3 w-3" />
-                Materia Prima
+                Insumos Secos
               </div>
 
               {/* Items de materia prima */}
@@ -420,7 +516,7 @@ export function FactoryFloorSimulation({
                 <div className="text-xs font-bold text-primary font-mono">
                   {totalRaw.toLocaleString('es-ES')}
                 </div>
-                <div className="text-[9px] text-muted-foreground">unidades totales</div>
+                <div className="text-[9px] text-muted-foreground">unidades (piezas)</div>
                 {lowStockItems.length > 0 && (
                   <div className="mt-1.5 flex items-center justify-center gap-1 rounded-md bg-orange-900/30 border border-orange-500/30 px-2 py-0.5">
                     <AlertTriangle className="h-2.5 w-2.5 text-orange-400 animate-pulse" />
@@ -441,7 +537,7 @@ export function FactoryFloorSimulation({
       </div>
 
       {/* ── Barra de resumen inferior ── */}
-      <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         {[
           {
             label: 'Capacidad activa',
@@ -451,18 +547,25 @@ export function FactoryFloorSimulation({
             bg: 'bg-green-950/30 border-green-500/20',
           },
           {
-            label: 'Materia Prima',
+            label: 'Insumos Secos',
             value: totalRaw.toLocaleString('es-ES'),
-            sub: `${lowStockItems.length} alertas activas`,
+            sub: `${lowStockItems.length} alertas de stock`,
             color: lowStockItems.length > 0 ? 'text-orange-400' : 'text-primary',
             bg: lowStockItems.length > 0 ? 'bg-orange-950/20 border-orange-500/20' : 'bg-primary/5 border-primary/20',
+          },
+          {
+            label: 'Pozo / Agua Cruda',
+            value: formattedVolume,
+            sub: 'Nivel Óptimo · Volumen',
+            color: 'text-cyan-400',
+            bg: 'bg-cyan-950/20 border-cyan-500/20',
           },
           {
             label: 'Prod. Terminado',
             value: grandTotal.toLocaleString('es-ES'),
             sub: `Zona A: ${totalZoneA} · Zona D: ${totalZoneD}`,
-            color: 'text-cyan-400',
-            bg: 'bg-cyan-950/20 border-cyan-500/20',
+            color: 'text-blue-400',
+            bg: 'bg-blue-950/20 border-blue-500/20',
           },
           {
             label: 'Estado global',
@@ -489,6 +592,10 @@ export function FactoryFloorSimulation({
         @keyframes bottleBounce {
           0%, 100% { transform: translateY(0px); }
           50%       { transform: translateY(-3px); }
+        }
+        @keyframes waterWave {
+          0%   { transform: translateY(0px) scaleY(1); }
+          100% { transform: translateY(-2px) scaleY(1.1); }
         }
       `}</style>
     </div>
