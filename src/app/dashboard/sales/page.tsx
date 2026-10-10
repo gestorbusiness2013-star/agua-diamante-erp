@@ -1056,7 +1056,7 @@ export default function SalesPage() {
                                 <span className="text-xs text-muted-foreground font-medium">Monto Total:</span>
                                 <span className="font-bold text-foreground">{saleToCancel ? formatCurrency(saleToCancel.totalAmount) : ''}</span>
                             </div>
-                            <p className="text-xs text-amber-600 dark:text-amber-400 pt-1.5 border-t border-border/50">
+                            <p className="text-xs text-amber-800 dark:text-amber-300 font-medium pt-1.5 border-t border-border/50">
                                 ⚠️ Los vendedores deben solicitar a un Administrador que ingrese su clave o contraseña para anular esta orden.
                             </p>
                         </div>

@@ -137,12 +137,12 @@ export function FactoryFloorSimulation({
           className="fixed z-[200] pointer-events-none"
           style={{ left: tooltipPos.x + 14, top: tooltipPos.y - 10 }}
         >
-          <div className="bg-card border border-border rounded-xl shadow-2xl p-3 min-w-[180px] max-w-[240px]">
+          <div className="bg-popover border border-border rounded-xl shadow-2xl p-3 min-w-[200px] max-w-[280px]">
             <p className="text-xs font-bold text-foreground mb-2 border-b border-border pb-1">{tooltip.title}</p>
             {tooltip.lines.map((l, i) => (
               <div key={i} className="flex justify-between items-center gap-3 text-xs py-0.5">
                 <span className="text-muted-foreground">{l.label}</span>
-                <span className={`font-mono font-semibold ${l.alert ? 'text-orange-400' : 'text-foreground'}`}>{l.value}</span>
+                <span className={`font-mono font-bold ${l.alert ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>{l.value}</span>
               </div>
             ))}
           </div>
@@ -154,7 +154,7 @@ export function FactoryFloorSimulation({
 
         {/* ═══ EXTERIOR IZQUIERDO – Circuito Hídrico & Llenado de Cisternas (Zona D) ═══ */}
         <div
-          className="flex flex-col lg:w-[260px] shrink-0 rounded-2xl border border-dashed border-cyan-500/30 bg-gradient-to-b from-blue-950/25 via-slate-900/40 to-blue-950/25 p-3 cursor-pointer hover:border-cyan-400/50 transition-all group"
+          className="flex flex-col lg:w-[260px] shrink-0 rounded-2xl border border-slate-700/80 bg-slate-900 text-slate-100 p-3 cursor-pointer hover:border-cyan-400/60 shadow-lg transition-all group"
           onMouseEnter={(e) =>
             showTooltip(e, {
               title: 'Circuito Hídrico & Bahía de Cisternas (Zona D)',
@@ -171,16 +171,16 @@ export function FactoryFloorSimulation({
           onMouseLeave={hideTooltip}
         >
           {/* Header exterior con badge de tarifa */}
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/40">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-700/80">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                <Waves className="h-3.5 w-3.5 text-cyan-400" />
+              <div className="text-[11px] font-black uppercase tracking-wider text-cyan-300 flex items-center gap-1.5 drop-shadow-sm">
+                <Waves className="h-4 w-4 text-cyan-400" />
                 Exterior · Zona D
               </div>
-              <p className="text-[9px] text-muted-foreground">Circuito Hídrico Exterior</p>
+              <p className="text-[9.5px] text-slate-300 font-medium">Circuito Hídrico Exterior</p>
             </div>
             {/* Indicador de Tarifa visible */}
-            <Badge className="bg-emerald-950/70 border border-emerald-500/50 text-emerald-300 text-[10px] font-mono font-semibold px-2 py-0.5 shadow-sm">
+            <Badge className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-0 text-[10px] font-mono font-black px-2 py-0.5 shadow-md">
               $1.00 / 1.000 L
             </Badge>
           </div>
@@ -189,7 +189,7 @@ export function FactoryFloorSimulation({
           <div className="flex flex-col flex-1 justify-between">
             {/* 1. Pozo Profundo (Captación) */}
             <div
-              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/70 border border-cyan-500/20 hover:border-cyan-400/40 transition-colors"
+              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-800/90 border border-slate-700 hover:border-cyan-400 transition-colors shadow-sm"
               onMouseEnter={(e) => {
                 e.stopPropagation();
                 showTooltip(e, {
@@ -204,21 +204,21 @@ export function FactoryFloorSimulation({
               onMouseMove={moveTooltip}
               onMouseLeave={hideTooltip}
             >
-              <div className="w-8 h-8 rounded-lg bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center shrink-0 shadow-inner">
+              <div className="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-400/60 flex items-center justify-center shrink-0 shadow-inner">
                 <Waves className="h-4 w-4 text-cyan-300" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-foreground">Pozo Profundo</span>
-                  <span className="text-[9px] font-mono text-cyan-300 font-semibold">{formattedVolume}</span>
+                  <span className="text-[11px] font-bold text-white">Pozo Profundo</span>
+                  <span className="text-[10px] font-mono text-cyan-300 font-bold">{formattedVolume}</span>
                 </div>
-                <p className="text-[9px] text-muted-foreground truncate">Captación de agua cruda</p>
+                <p className="text-[9.5px] text-slate-300 font-medium truncate">Captación de agua cruda</p>
               </div>
             </div>
 
             {/* Tubería animada 1: Pozo → Desbarradores */}
             <div className="relative flex items-center justify-center h-4 my-0.5">
-              <div className="w-1.5 h-full bg-slate-800 rounded-full overflow-hidden relative border border-slate-700/60 shadow-inner">
+              <div className="w-1.5 h-full bg-slate-800 rounded-full overflow-hidden relative border border-slate-700 shadow-inner">
                 <div
                   className="w-full h-full bg-gradient-to-b from-cyan-400 via-blue-400 to-cyan-400"
                   style={{
@@ -227,12 +227,12 @@ export function FactoryFloorSimulation({
                   }}
                 />
               </div>
-              <span className="absolute right-2 text-[8px] font-mono text-cyan-400/60">↓ agua cruda</span>
+              <span className="absolute right-2 text-[8.5px] font-mono text-cyan-200 font-bold drop-shadow">↓ agua cruda</span>
             </div>
 
             {/* 2. Batería de Desbarradores (Desarenadores / Filtración Primaria) */}
             <div
-              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/70 border border-blue-500/20 hover:border-blue-400/40 transition-colors"
+              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-800/90 border border-slate-700 hover:border-blue-400 transition-colors shadow-sm"
               onMouseEnter={(e) => {
                 e.stopPropagation();
                 showTooltip(e, {
@@ -247,25 +247,25 @@ export function FactoryFloorSimulation({
               onMouseMove={moveTooltip}
               onMouseLeave={hideTooltip}
             >
-              <div className="w-8 h-8 rounded-lg bg-blue-950/80 border border-blue-500/40 flex items-center justify-center gap-0.5 shrink-0 shadow-inner">
-                <div className="w-1.5 h-5 rounded-t-sm rounded-b-md bg-gradient-to-b from-slate-400 to-amber-700/70 border border-slate-400/50" />
-                <div className="w-1.5 h-5 rounded-t-sm rounded-b-md bg-gradient-to-b from-slate-400 to-amber-700/70 border border-slate-400/50" />
-                <div className="w-1.5 h-5 rounded-t-sm rounded-b-md bg-gradient-to-b from-slate-400 to-amber-700/70 border border-slate-400/50" />
+              <div className="w-8 h-8 rounded-lg bg-blue-950 border border-blue-400/60 flex items-center justify-center gap-0.5 shrink-0 shadow-inner">
+                <div className="w-1.5 h-5 rounded-t-sm rounded-b-md bg-gradient-to-b from-slate-300 to-amber-500 border border-slate-400/50" />
+                <div className="w-1.5 h-5 rounded-t-sm rounded-b-md bg-gradient-to-b from-slate-300 to-amber-500 border border-slate-400/50" />
+                <div className="w-1.5 h-5 rounded-t-sm rounded-b-md bg-gradient-to-b from-slate-300 to-amber-500 border border-slate-400/50" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-foreground">Desbarradores</span>
-                  <Badge variant="outline" className="text-[8px] py-0 px-1 border-blue-500/40 text-blue-300">
+                  <span className="text-[11px] font-bold text-white">Desbarradores</span>
+                  <Badge className="text-[9px] py-0 px-1.5 bg-blue-900 text-blue-100 border border-blue-400 font-bold">
                     Primaria
                   </Badge>
                 </div>
-                <p className="text-[9px] text-muted-foreground truncate">Batería de desarenado</p>
+                <p className="text-[9.5px] text-slate-300 font-medium truncate">Batería de desarenado</p>
               </div>
             </div>
 
             {/* Tubería animada 2: Desbarradores → Tanques */}
             <div className="relative flex items-center justify-center h-4 my-0.5">
-              <div className="w-1.5 h-full bg-slate-800 rounded-full overflow-hidden relative border border-slate-700/60 shadow-inner">
+              <div className="w-1.5 h-full bg-slate-800 rounded-full overflow-hidden relative border border-slate-700 shadow-inner">
                 <div
                   className="w-full h-full bg-gradient-to-b from-cyan-400 via-blue-400 to-cyan-400"
                   style={{
@@ -274,12 +274,12 @@ export function FactoryFloorSimulation({
                   }}
                 />
               </div>
-              <span className="absolute right-2 text-[8px] font-mono text-cyan-400/60">↓ agua clarificada</span>
+              <span className="absolute right-2 text-[8.5px] font-mono text-cyan-200 font-bold drop-shadow">↓ agua clarificada</span>
             </div>
 
             {/* 3. Tanques de Almacenamiento de Agua Tratada */}
             <div
-              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/70 border border-cyan-500/20 hover:border-cyan-400/40 transition-colors"
+              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-800/90 border border-slate-700 hover:border-cyan-400 transition-colors shadow-sm"
               onMouseEnter={(e) => {
                 e.stopPropagation();
                 showTooltip(e, {
@@ -295,34 +295,34 @@ export function FactoryFloorSimulation({
               onMouseMove={moveTooltip}
               onMouseLeave={hideTooltip}
             >
-              <div className="w-8 h-8 rounded-lg bg-slate-950 border border-cyan-400/50 relative overflow-hidden shrink-0 shadow-inner flex flex-col justify-end">
+              <div className="w-8 h-8 rounded-lg bg-slate-950 border border-cyan-400/60 relative overflow-hidden shrink-0 shadow-inner flex flex-col justify-end">
                 <div
-                  className="w-full bg-gradient-to-t from-cyan-600 to-cyan-400/80 relative"
+                  className="w-full bg-gradient-to-t from-cyan-600 to-cyan-400/90 relative"
                   style={{ height: '75%' }}
                 >
                   <div
-                    className="absolute inset-x-0 top-0 h-1 bg-cyan-200/80"
+                    className="absolute inset-x-0 top-0 h-1 bg-cyan-200"
                     style={{ animation: 'waterWave 2s ease-in-out infinite alternate' }}
                   />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="text-[7.5px] font-bold text-white drop-shadow">H₂O</span>
+                  <span className="text-[8px] font-black text-white drop-shadow">H₂O</span>
                 </div>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-foreground">Tanques Tratada</span>
-                  <Badge variant="outline" className="text-[8px] py-0 px-1 border-cyan-500/40 text-cyan-300">
+                  <span className="text-[11px] font-bold text-white">Tanques Tratada</span>
+                  <Badge className="text-[9px] py-0 px-1.5 bg-cyan-900 text-cyan-100 border border-cyan-400 font-bold">
                     Óptimo
                   </Badge>
                 </div>
-                <p className="text-[9px] text-muted-foreground truncate">Pulmón de almacenamiento</p>
+                <p className="text-[9.5px] text-slate-300 font-medium truncate">Pulmón de almacenamiento</p>
               </div>
             </div>
 
             {/* Tubería animada 3: Tanques → Brazo de Llenado */}
             <div className="relative flex items-center justify-center h-4 my-0.5">
-              <div className="w-1.5 h-full bg-slate-800 rounded-full overflow-hidden relative border border-slate-700/60 shadow-inner">
+              <div className="w-1.5 h-full bg-slate-800 rounded-full overflow-hidden relative border border-slate-700 shadow-inner">
                 <div
                   className="w-full h-full bg-gradient-to-b from-cyan-400 via-blue-400 to-cyan-400"
                   style={{
@@ -331,12 +331,12 @@ export function FactoryFloorSimulation({
                   }}
                 />
               </div>
-              <span className="absolute right-2 text-[8px] font-mono text-cyan-400/60">↓ línea a cisterna</span>
+              <span className="absolute right-2 text-[8.5px] font-mono text-cyan-200 font-bold drop-shadow">↓ línea a cisterna</span>
             </div>
 
             {/* 4. Bahía de Carga / Brazo de Llenado & Camión Cisterna */}
             <div
-              className="flex flex-col items-center p-2.5 rounded-xl bg-gradient-to-b from-slate-900/80 to-blue-950/40 border border-blue-500/30 hover:border-blue-400/60 transition-colors group relative"
+              className="flex flex-col items-center p-2.5 rounded-xl bg-slate-800/95 border border-slate-700 hover:border-cyan-400/70 transition-colors group relative shadow-md"
               onMouseEnter={(e) => {
                 e.stopPropagation();
                 showTooltip(e, {
@@ -355,10 +355,10 @@ export function FactoryFloorSimulation({
             >
               {/* Brazo de carga (Gantry) sobre el camión */}
               <div className="w-full flex items-center justify-between mb-1 px-1">
-                <span className="text-[8px] font-mono font-medium text-cyan-300">Brazo de carga</span>
+                <span className="text-[9px] font-mono font-bold text-cyan-300">Brazo de carga</span>
                 {/* Viga y brazo articulado */}
                 <div className="relative flex items-center">
-                  <div className="h-1.5 w-16 bg-gradient-to-r from-slate-500 to-slate-400 rounded-sm" />
+                  <div className="h-1.5 w-16 bg-gradient-to-r from-slate-400 to-slate-300 rounded-sm" />
                   {/* Codo y manguera descendente */}
                   <div className="w-1.5 h-3 bg-cyan-400 rounded-b-sm relative -ml-3">
                     <div className="w-full h-full bg-cyan-300 animate-pulse" />
@@ -378,12 +378,12 @@ export function FactoryFloorSimulation({
                   <div className="relative">
                     {/* Boca superior de llenado con manguera activa */}
                     <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 flex items-center gap-0.5">
-                      <div className="w-3 h-1.5 bg-yellow-400/90 rounded-t-sm shadow-sm" />
+                      <div className="w-3 h-1.5 bg-yellow-400 rounded-t-sm shadow-sm" />
                       <div className="w-1 h-2 bg-cyan-400 animate-pulse rounded-full" />
                     </div>
                     {/* Cilindro cisterna */}
-                    <div className="w-20 h-7 rounded-full bg-gradient-to-r from-slate-400 via-slate-200 to-slate-400 border border-slate-300 shadow-inner flex items-center justify-center">
-                      <span className="text-[7.5px] font-bold text-slate-800 tracking-wider">CISTERNA</span>
+                    <div className="w-20 h-7 rounded-full bg-gradient-to-r from-slate-300 via-slate-100 to-slate-300 border border-slate-300 shadow-inner flex items-center justify-center">
+                      <span className="text-[8px] font-black text-slate-900 tracking-wider">CISTERNA</span>
                     </div>
                   </div>
                 </div>
@@ -397,16 +397,16 @@ export function FactoryFloorSimulation({
               </div>
 
               {/* Métricas y tarifa de Zona D */}
-              <div className="w-full mt-2 pt-2 border-t border-border/40 text-center space-y-1">
-                <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-muted-foreground font-medium">Stock Zona D:</span>
-                  <span className="font-mono font-bold text-cyan-300">{totalZoneD.toLocaleString('es-ES')} cargas</span>
+              <div className="w-full mt-2 pt-2 border-t border-slate-700 text-center space-y-1">
+                <div className="flex items-center justify-between text-[10.5px]">
+                  <span className="text-slate-300 font-semibold">Stock Zona D:</span>
+                  <span className="font-mono font-black text-cyan-300">{totalZoneD.toLocaleString('es-ES')} cargas</span>
                 </div>
-                <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-muted-foreground font-medium">Tarifa despacho:</span>
-                  <span className="font-mono font-bold text-emerald-400">$1.00 / 1.000 L</span>
+                <div className="flex items-center justify-between text-[10.5px]">
+                  <span className="text-slate-300 font-semibold">Tarifa despacho:</span>
+                  <span className="font-mono font-black text-emerald-400">$1.00 / 1.000 L</span>
                 </div>
-                <Badge variant="outline" className="w-full justify-center text-[9px] py-0.5 border-blue-500/40 text-blue-300 bg-blue-950/40">
+                <Badge className="w-full justify-center text-[9.5px] py-1 border-0 text-emerald-950 font-bold bg-emerald-400 shadow-sm">
                   🟢 Llenado activo en bahía
                 </Badge>
               </div>
@@ -424,10 +424,9 @@ export function FactoryFloorSimulation({
           </div>
 
           {/* Portón de despacho (izquierda) */}
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-20 bg-gradient-to-r
-                          from-yellow-500/80 to-yellow-400/40 rounded-r-sm">
-            <div className="absolute -right-1 top-1/2 -translate-y-1/2 text-[8px]
-                            text-yellow-300/70 font-bold rotate-90 whitespace-nowrap">
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2.5 h-20 bg-amber-400 rounded-r-sm shadow-md">
+            <div className="absolute -right-2 top-1/2 -translate-y-1/2 text-[8px]
+                            text-slate-950 font-black rotate-90 whitespace-nowrap tracking-widest">
               PORTÓN
             </div>
           </div>
@@ -451,8 +450,8 @@ export function FactoryFloorSimulation({
               onMouseMove={moveTooltip}
               onMouseLeave={hideTooltip}
             >
-              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Package className="h-3 w-3" />
+              <div className="text-[10px] font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                <Package className="h-3 w-3 text-emerald-700 dark:text-emerald-400" />
                 Producto Terminado
               </div>
 
@@ -461,30 +460,30 @@ export function FactoryFloorSimulation({
                 {[...Array(3)].map((_, i) => (
                   <div
                     key={i}
-                    className="relative h-8 rounded-lg border border-green-500/30
-                               bg-gradient-to-r from-green-950/60 to-green-900/40
-                               group-hover:border-green-400/50 transition-colors overflow-hidden"
+                    className="relative h-8 rounded-lg border border-emerald-400/80
+                               bg-emerald-100/80 dark:bg-emerald-950/60
+                               group-hover:border-emerald-500 transition-colors overflow-hidden"
                   >
                     {/* Pallet stripes */}
-                    <div className="absolute inset-0 flex gap-0.5 p-1 opacity-40">
+                    <div className="absolute inset-0 flex gap-0.5 p-1 opacity-50">
                       {[...Array(5)].map((_, j) => (
-                        <div key={j} className="flex-1 rounded-sm bg-green-400/50" />
+                        <div key={j} className="flex-1 rounded-sm bg-emerald-400 dark:bg-emerald-500/40" />
                       ))}
                     </div>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-[9px] font-bold text-green-300/90">PALLET</span>
+                      <span className="text-[9px] font-black text-emerald-950 dark:text-emerald-200 tracking-wider">PALLET</span>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Métrica */}
-              <div className="rounded-lg bg-green-950/40 border border-green-500/20 p-2 text-center">
-                <div className="text-sm font-bold text-green-300 font-mono">
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-600 p-2 text-center shadow-sm">
+                <div className="text-sm font-black text-emerald-900 dark:text-emerald-300 font-mono">
                   {totalZoneA.toLocaleString('es-ES')}
                 </div>
-                <div className="text-[9px] text-muted-foreground">Pack 12 Bot. 600ml</div>
-                <Badge className="mt-1 text-[9px] py-0 px-1.5 bg-green-800/60 text-green-300 border-0">
+                <div className="text-[9px] text-slate-700 dark:text-slate-300 font-medium">Pack 12 Bot. 600ml</div>
+                <Badge className="mt-1 text-[9px] py-0 px-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold border-0 shadow-xs">
                   Zona A
                 </Badge>
               </div>
@@ -497,8 +496,8 @@ export function FactoryFloorSimulation({
 
             {/* ── COL 2: Líneas de Embotellado ── */}
             <div className="flex-1 flex flex-col gap-3">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Activity className="h-3 w-3" />
+              <div className="text-[10px] font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                <Activity className="h-3 w-3 text-emerald-700 dark:text-emerald-400" />
                 Líneas de Embotellado
               </div>
 
@@ -506,10 +505,10 @@ export function FactoryFloorSimulation({
               {activeLines.slice(0, 1).map((line) => (
                 <div
                   key={line.id}
-                  className="relative flex-1 rounded-xl border border-green-500/40
-                             bg-gradient-to-br from-green-950/60 to-green-900/20
-                             p-3 overflow-hidden cursor-pointer
-                             hover:border-green-400/60 hover:shadow-green-900/30 hover:shadow-lg transition-all"
+                  className="relative flex-1 rounded-xl border border-emerald-400 dark:border-emerald-600
+                             bg-emerald-50/90 dark:bg-gradient-to-br dark:from-green-950/60 dark:to-green-900/20
+                             p-3 overflow-hidden cursor-pointer shadow-sm
+                             hover:border-emerald-500 hover:shadow-md transition-all"
                   onMouseEnter={(e) =>
                     showTooltip(e, {
                       title: line.name,
@@ -524,11 +523,11 @@ export function FactoryFloorSimulation({
                   onMouseLeave={hideTooltip}
                 >
                   {/* Faja transportadora animada */}
-                  <div className="absolute bottom-3 left-3 right-3 h-3 rounded-full overflow-hidden bg-gray-800/60">
+                  <div className="absolute bottom-3 left-3 right-3 h-3 rounded-full overflow-hidden bg-slate-700 dark:bg-gray-800">
                     <div
                       className="h-full rounded-full"
                       style={{
-                        background: 'repeating-linear-gradient(90deg, rgba(34,197,94,0.6) 0px, rgba(34,197,94,0.6) 8px, transparent 8px, transparent 16px)',
+                        background: 'repeating-linear-gradient(90deg, rgba(34,197,94,0.95) 0px, rgba(34,197,94,0.95) 8px, transparent 8px, transparent 16px)',
                         backgroundSize: '32px 100%',
                         animation: 'conveyor 1.2s linear infinite',
                       }}
@@ -539,7 +538,7 @@ export function FactoryFloorSimulation({
                     {[...Array(5)].map((_, i) => (
                       <div
                         key={i}
-                        className="w-2 h-5 rounded-t-full rounded-b-sm bg-gradient-to-b from-cyan-200 to-cyan-400/60 border border-cyan-300/40"
+                        className="w-2 h-5 rounded-t-full rounded-b-sm bg-gradient-to-b from-sky-300 to-sky-500 border border-sky-600 shadow-xs"
                         style={{ animation: `bottleBounce 1.2s ease-in-out ${i * 0.24}s infinite` }}
                       />
                     ))}
@@ -547,10 +546,10 @@ export function FactoryFloorSimulation({
 
                   <div className="flex items-start justify-between mb-8">
                     <div>
-                      <p className="text-xs font-bold text-green-300">{line.name}</p>
-                      <p className="text-[9px] text-muted-foreground mt-0.5">Botellas 600ml</p>
+                      <p className="text-xs font-black text-emerald-950 dark:text-emerald-100">{line.name}</p>
+                      <p className="text-[9.5px] text-emerald-900 dark:text-emerald-300 font-semibold mt-0.5">Botellas 600ml</p>
                     </div>
-                    <Badge className="text-[9px] py-0 px-1.5 bg-green-600/30 text-green-300 border border-green-500/40">
+                    <Badge className="text-[9.5px] py-0.5 px-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold border-0 shadow-xs">
                       🟢 En operación
                     </Badge>
                   </div>
@@ -561,9 +560,9 @@ export function FactoryFloorSimulation({
               {pausedLines.map((line) => (
                 <div
                   key={line.id}
-                  className="relative rounded-xl border border-border/40 bg-muted/20
-                             p-3 cursor-pointer opacity-60
-                             hover:opacity-80 hover:border-border/70 transition-all"
+                  className="relative rounded-xl border border-slate-300 dark:border-border/40 bg-slate-100/70 dark:bg-muted/20
+                             p-3 cursor-pointer opacity-70
+                             hover:opacity-100 hover:border-slate-400 dark:hover:border-border/70 transition-all"
                   onMouseEnter={(e) =>
                     showTooltip(e, {
                       title: line.name,
@@ -578,21 +577,21 @@ export function FactoryFloorSimulation({
                   onMouseLeave={hideTooltip}
                 >
                   {/* Faja estática */}
-                  <div className="absolute bottom-3 left-3 right-3 h-3 rounded-full overflow-hidden bg-gray-800/40">
-                    <div className="h-full rounded-full bg-gray-700/30" />
+                  <div className="absolute bottom-3 left-3 right-3 h-3 rounded-full overflow-hidden bg-slate-400/60 dark:bg-gray-800/40">
+                    <div className="h-full rounded-full bg-slate-500/40 dark:bg-gray-700/30" />
                   </div>
                   {/* Botellas estáticas */}
                   <div className="absolute bottom-4.5 left-0 right-0 flex justify-around px-4" style={{ bottom: '18px' }}>
                     {[...Array(5)].map((_, i) => (
-                      <div key={i} className="w-2 h-5 rounded-t-full rounded-b-sm bg-gray-600/40 border border-gray-500/20" />
+                      <div key={i} className="w-2 h-5 rounded-t-full rounded-b-sm bg-slate-400 border border-slate-500/40" />
                     ))}
                   </div>
                   <div className="flex items-start justify-between mb-8">
                     <div>
-                      <p className="text-xs font-bold text-muted-foreground">{line.name}</p>
-                      <p className="text-[9px] text-muted-foreground/60 mt-0.5">Inactiva</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-muted-foreground">{line.name}</p>
+                      <p className="text-[9px] text-slate-600 dark:text-muted-foreground/60 mt-0.5 font-medium">Inactiva</p>
                     </div>
-                    <Badge variant="outline" className="text-[9px] py-0 px-1.5 text-muted-foreground border-border/50 flex items-center gap-1">
+                    <Badge variant="outline" className="text-[9px] py-0 px-1.5 text-slate-700 dark:text-muted-foreground border-slate-300 dark:border-border/50 font-semibold flex items-center gap-1">
                       <Pause className="h-2.5 w-2.5" /> En pausa
                     </Badge>
                   </div>
@@ -600,7 +599,7 @@ export function FactoryFloorSimulation({
               ))}
 
               {/* Líneas de flujo: flechas visuales */}
-              <div className="flex justify-center gap-1 items-center opacity-30 py-0.5">
+              <div className="flex justify-center gap-1 items-center opacity-40 py-0.5">
                 <div className="h-0.5 flex-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
                 <ArrowRight className="h-3 w-3 text-primary" />
                 <div className="h-0.5 flex-1 bg-gradient-to-r from-primary via-transparent to-transparent" />
@@ -627,8 +626,8 @@ export function FactoryFloorSimulation({
               onMouseMove={moveTooltip}
               onMouseLeave={hideTooltip}
             >
-              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Droplets className="h-3 w-3" />
+              <div className="text-[10px] font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                <Droplets className="h-3 w-3 text-amber-700 dark:text-amber-400" />
                 Insumos Secos
               </div>
 
@@ -646,16 +645,16 @@ export function FactoryFloorSimulation({
                       key={item.label}
                       className={`flex items-center gap-2 rounded-lg px-2 py-1.5 border transition-colors
                         ${isAlert
-                          ? 'border-orange-500/40 bg-orange-950/30 group-hover:border-orange-400/60'
-                          : 'border-border/30 bg-muted/20 group-hover:border-border/60'
+                          ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/40 group-hover:border-amber-500'
+                          : 'border-slate-300 dark:border-border/30 bg-slate-50 dark:bg-muted/20 group-hover:border-slate-400'
                         }`}
                     >
                       <span className="text-sm leading-none">{item.icon}</span>
-                      <span className={`text-[10px] font-medium flex-1 ${isAlert ? 'text-orange-300' : 'text-muted-foreground'}`}>
+                      <span className={`text-[10px] font-bold flex-1 ${isAlert ? 'text-amber-950 dark:text-amber-200' : 'text-slate-800 dark:text-slate-200'}`}>
                         {item.label}
                       </span>
                       {isAlert && (
-                        <AlertTriangle className="h-3 w-3 text-orange-400 animate-pulse shrink-0" />
+                        <AlertTriangle className="h-3 w-3 text-amber-700 dark:text-amber-400 animate-pulse shrink-0" />
                       )}
                     </div>
                   );
@@ -663,15 +662,15 @@ export function FactoryFloorSimulation({
               </div>
 
               {/* Métrica total */}
-              <div className="rounded-lg bg-primary/5 border border-primary/20 p-2 text-center">
-                <div className="text-xs font-bold text-primary font-mono">
+              <div className="rounded-lg bg-amber-50/70 dark:bg-primary/5 border border-amber-300 dark:border-primary/20 p-2 text-center shadow-sm">
+                <div className="text-xs font-black text-amber-950 dark:text-amber-200 font-mono">
                   {totalRaw.toLocaleString('es-ES')}
                 </div>
-                <div className="text-[9px] text-muted-foreground">unidades (piezas)</div>
+                <div className="text-[9px] text-slate-700 dark:text-slate-300 font-medium">unidades (piezas)</div>
                 {lowStockItems.length > 0 && (
-                  <div className="mt-1.5 flex items-center justify-center gap-1 rounded-md bg-orange-900/30 border border-orange-500/30 px-2 py-0.5">
-                    <AlertTriangle className="h-2.5 w-2.5 text-orange-400 animate-pulse" />
-                    <span className="text-[9px] font-semibold text-orange-400">
+                  <div className="mt-1.5 flex items-center justify-center gap-1 rounded-md bg-amber-600 text-white px-2 py-0.5 shadow-xs">
+                    <AlertTriangle className="h-2.5 w-2.5 text-white animate-pulse" />
+                    <span className="text-[9px] font-bold">
                       {lowStockItems.length} alertas
                     </span>
                   </div>
@@ -694,42 +693,52 @@ export function FactoryFloorSimulation({
             label: 'Capacidad activa',
             value: `${productionLines.length > 0 ? Math.round((activeLines.length / productionLines.length) * 100) : 0}%`,
             sub: `${activeLines.length} de ${productionLines.length} líneas`,
-            color: 'text-green-400',
-            bg: 'bg-green-950/30 border-green-500/20',
+            color: 'text-emerald-800 dark:text-emerald-300',
+            bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800',
+            labelColor: 'text-emerald-950 dark:text-emerald-200',
+            subColor: 'text-emerald-900/80 dark:text-emerald-300',
           },
           {
             label: 'Insumos Secos',
             value: totalRaw.toLocaleString('es-ES'),
             sub: `${lowStockItems.length} alertas de stock`,
-            color: lowStockItems.length > 0 ? 'text-orange-400' : 'text-primary',
-            bg: lowStockItems.length > 0 ? 'bg-orange-950/20 border-orange-500/20' : 'bg-primary/5 border-primary/20',
+            color: 'text-amber-900 dark:text-amber-300',
+            bg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800',
+            labelColor: 'text-amber-950 dark:text-amber-200',
+            subColor: 'text-amber-900/80 dark:text-amber-300',
           },
           {
             label: 'Pozo / Agua Cruda',
             value: formattedVolume,
             sub: 'Nivel Óptimo · Volumen',
-            color: 'text-cyan-400',
-            bg: 'bg-cyan-950/20 border-cyan-500/20',
+            color: 'text-sky-900 dark:text-sky-300',
+            bg: 'bg-sky-50 dark:bg-sky-950/40 border-sky-300 dark:border-sky-800',
+            labelColor: 'text-sky-950 dark:text-sky-200',
+            subColor: 'text-sky-900/80 dark:text-sky-300',
           },
           {
             label: 'Prod. Terminado',
             value: grandTotal.toLocaleString('es-ES'),
             sub: `Zona A: ${totalZoneA} · Zona D: ${totalZoneD}`,
-            color: 'text-blue-400',
-            bg: 'bg-blue-950/20 border-blue-500/20',
+            color: 'text-blue-900 dark:text-blue-300',
+            bg: 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800',
+            labelColor: 'text-blue-950 dark:text-blue-200',
+            subColor: 'text-blue-900/80 dark:text-blue-300',
           },
           {
             label: 'Estado global',
             value: activeLines.length > 0 ? 'Operativa' : 'Pausada',
             sub: activeLines.length > 0 ? 'Producción en curso' : 'Sin líneas activas',
-            color: activeLines.length > 0 ? 'text-green-400' : 'text-muted-foreground',
-            bg: activeLines.length > 0 ? 'bg-green-950/20 border-green-500/20' : 'bg-muted/20 border-border/30',
+            color: activeLines.length > 0 ? 'text-emerald-800 dark:text-emerald-300' : 'text-slate-800 dark:text-slate-300',
+            bg: activeLines.length > 0 ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800' : 'bg-slate-100 dark:bg-muted/30 border-slate-300 dark:border-border',
+            labelColor: activeLines.length > 0 ? 'text-emerald-950 dark:text-emerald-200' : 'text-slate-900 dark:text-slate-200',
+            subColor: activeLines.length > 0 ? 'text-emerald-900/80 dark:text-emerald-300' : 'text-slate-600 dark:text-slate-400',
           },
         ].map((stat) => (
-          <div key={stat.label} className={`rounded-xl border p-3 ${stat.bg}`}>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{stat.label}</p>
-            <p className={`text-sm font-bold font-mono mt-0.5 ${stat.color}`}>{stat.value}</p>
-            <p className="text-[9px] text-muted-foreground/70 mt-0.5">{stat.sub}</p>
+          <div key={stat.label} className={`rounded-xl border p-3 shadow-sm ${stat.bg}`}>
+            <p className={`text-[10px] uppercase tracking-wider font-bold ${stat.labelColor}`}>{stat.label}</p>
+            <p className={`text-base font-black font-mono mt-0.5 ${stat.color}`}>{stat.value}</p>
+            <p className={`text-[9.5px] font-semibold mt-0.5 ${stat.subColor}`}>{stat.sub}</p>
           </div>
         ))}
       </div>
