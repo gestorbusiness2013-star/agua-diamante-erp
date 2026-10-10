@@ -35,6 +35,7 @@ import { CollectPaymentDialog } from "@/components/collect-payment-dialog";
 import type { Sale } from "@/lib/sales-data";
 import { getSaleItems } from "@/lib/sales-data";
 import { useAuth } from "@/context/auth-context";
+import { computeSellerCredit, CREDIT_LEVELS } from "@/lib/seller-credit";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -83,6 +84,12 @@ export default function SalesPage() {
             to: endOfMonth(today),
         };
     });
+
+    const sellerCreditStatus = useMemo(() => {
+        if (!currentUser || currentUser.role !== 'Vendedor') return null;
+        const sellerProfile = (users || []).find(u => u.id === currentUser.id) || currentUser;
+        return computeSellerCredit(sellerProfile, sales, selectedSale?.id);
+    }, [currentUser, users, sales, selectedSale]);
 
     const isQuickActive = (type: 'today' | '7days' | 'month' | 'all') => {
         if (type === 'all') return !dispatchedDate;
@@ -708,6 +715,56 @@ export default function SalesPage() {
                 </div>
             </div>
 
+            {currentUser?.role === 'Vendedor' && sellerCreditStatus && (
+                <div className={cn(
+                    "rounded-xl border p-4 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all",
+                    sellerCreditStatus.isLocked 
+                        ? "border-red-300 bg-red-50/70 dark:bg-red-950/30 dark:border-red-900" 
+                        : "border-sky-200 bg-gradient-to-r from-sky-50/80 via-indigo-50/40 to-white dark:from-sky-950/20 dark:via-indigo-950/20 dark:to-background dark:border-sky-900/50"
+                )}>
+                    <div className="flex items-center gap-3.5">
+                        <div className="text-3xl p-2.5 rounded-2xl bg-white dark:bg-card shadow-xs border">
+                            {sellerCreditStatus.levelEmoji}
+                        </div>
+                        <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm tracking-tight">Tu Crédito Cashea:</span>
+                                <Badge className="bg-primary/90 text-primary-foreground font-semibold text-xs">
+                                    Nivel {sellerCreditStatus.level} · {sellerCreditStatus.levelName}
+                                </Badge>
+                                {sellerCreditStatus.isLocked && (
+                                    <Badge variant="destructive" className="text-[10px] uppercase font-bold animate-pulse">
+                                        Bloqueado por Mora
+                                    </Badge>
+                                )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Cupo máximo: <strong>{sellerCreditStatus.maxCreditBoxes} cajas</strong> • Retiradas pendientes: <strong>{sellerCreditStatus.currentCreditDebtBoxes} cajas</strong>
+                            </p>
+                        </div>
+                    </div>
+                    <div className="w-full md:w-80 space-y-1.5">
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="font-medium text-muted-foreground">Cajas Disponibles</span>
+                            <span className={cn("font-mono font-bold", sellerCreditStatus.availableBoxes === 0 ? "text-red-600" : "text-emerald-600")}>
+                                {sellerCreditStatus.availableBoxes} / {sellerCreditStatus.maxCreditBoxes} cajas
+                            </span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                            <div
+                                className={cn("h-full transition-all rounded-full", sellerCreditStatus.isLocked ? "bg-red-500" : "bg-emerald-500")}
+                                style={{ width: `${Math.min(100, (sellerCreditStatus.availableBoxes / sellerCreditStatus.maxCreditBoxes) * 100)}%` }}
+                            />
+                        </div>
+                        <p className="text-[11px] text-muted-foreground text-right">
+                            {sellerCreditStatus.level < 4 && sellerCreditStatus.nextLevel
+                                ? `${sellerCreditStatus.onTimePaymentsCount}/${sellerCreditStatus.paymentsToNextLevel} pagos a tiempo para Nivel ${sellerCreditStatus.level + 1} (${CREDIT_LEVELS[sellerCreditStatus.nextLevel].name})`
+                                : "👑 Nivel Máximo Alcanzado (250 cajas)"}
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <div className="grid gap-4 md:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -925,6 +982,7 @@ export default function SalesPage() {
                         customers={customers}
                         onSubmit={handleSaleFormSubmit}
                         onClose={handleCloseDialogs}
+                        creditStatus={sellerCreditStatus}
                     />
                 </DialogContent>
             </Dialog>

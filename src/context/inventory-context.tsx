@@ -17,6 +17,7 @@ import type { Movement } from '@/lib/movements-data';
 import type { Sale } from '@/lib/sales-data';
 import { getSaleItems } from '@/lib/sales-data';
 import { type User, type UserFormValues, getDefaultPermissions } from '@/lib/users-data';
+import { computeSellerCredit, countBoxes, isPaidOnTime, applyOnTimePayment, getMaxCreditBoxes, normalizeLevel, CREDIT_LEVELS } from '@/lib/seller-credit';
 import type { ProductionLine } from '@/lib/data';
 import type { Supplier } from '@/lib/suppliers-data';
 import type { Route } from '@/lib/routes-data';
@@ -95,6 +96,7 @@ interface InventoryContextType {
     updateUser: (user: User) => Promise<void>;
     deleteUser: (userId: string) => Promise<void>;
     updateUserLocation: (userId: string, location: { lat: number, lng: number }) => Promise<void>;
+    updateSellerCredit: (userId: string, data: { creditLevel?: number; isLocked?: boolean; onTimePaymentsCount?: number }) => Promise<void>;
     
     suppliers: Supplier[];
     addSupplier: (supplierData: SupplierFormValues) => Promise<void>;
@@ -560,6 +562,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 subtotal: item.quantity * item.unitPrice,
             }));
             const totalAmount = saleItems.reduce((sum, item) => sum + item.subtotal, 0);
+
+            // ── Validación de límite de crédito (estilo Cashea) ──
+            if (values.saleType === 'Consignación' && currentUser.role === 'Vendedor') {
+                const sellerProfile = users.find(u => u.id === currentUser.id) || currentUser;
+                const credit = computeSellerCredit(sellerProfile, sales);
+                const requestedBoxes = countBoxes(saleItems);
+                if (credit.isLocked) {
+                    throw new Error('Crédito bloqueado por deuda vencida. Regulariza tus pagos para retirar mercancía a consignación.');
+                }
+                if (requestedBoxes > credit.availableBoxes) {
+                    throw new Error(`Límite de crédito insuficiente. Cupo disponible: ${credit.availableBoxes} cajas.`);
+                }
+            }
             let commissionAmount: number | null = null;
             if (currentUser.role === 'Vendedor' && currentUser.commissionRate && values.saleType !== 'Cortesía') {
                 commissionAmount = totalAmount * (currentUser.commissionRate / 100);
@@ -605,6 +620,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 partialPaymentAmount: values.saleType === 'Consignación' ? (values.partialPaymentAmount || 0) : 0,
                 dueDate: dueDate,
             });
+
+            // Sincronizar deuda en cajas del vendedor en Firestore
+            if (values.saleType === 'Consignación' && currentUser.role === 'Vendedor') {
+                const requestedBoxes = countBoxes(saleItems);
+                const seller = users.find(u => u.id === currentUser.id);
+                if (seller) {
+                    const debtNow = (Number(seller.currentCreditDebtBoxes) || 0) + requestedBoxes;
+                    await updateDoc(doc(db, 'users', seller.id), { currentCreditDebtBoxes: debtNow }).catch(() => {});
+                }
+            }
+
             toast({ title: "Orden de Venta Creada" });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error al crear orden', description: error.message });
@@ -680,7 +706,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 finalReceiptUrl = await getDownloadURL(storageRef);
             }
 
-            const updates: any = { status: 'Pagado' };
+            const paidAt = new Date();
+            const onTime = isPaidOnTime(saleToCollect, paidAt);
+            const updates: any = { status: 'Pagado', paidAt, paidOnTime: onTime };
             if (paymentData) {
                 updates.finalPaymentMethod = paymentData.method;
                 if (paymentData.reference) updates.finalReferenceNumber = paymentData.reference;
@@ -688,7 +716,38 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             }
 
             await updateDoc(doc(db, 'sales', saleToCollect.id), updates);
-            toast({ title: "Pago Registrado" });
+
+            // ── Liberar cupo y sumar al contador de ascenso de nivel ──
+            // El cupo se libera automáticamente porque la venta deja de estar 'Por Cobrar'.
+            let levelUpMsg = '';
+            if (saleToCollect.saleType === 'Consignación') {
+                const seller = users.find(u => (u.name || '').trim().toLowerCase() === (saleToCollect.user || '').trim().toLowerCase());
+                if (seller) {
+                    const remainingSales = sales.map(s => s.id === saleToCollect.id ? { ...s, status: 'Pagado' as const } : s);
+                    const debtAfter = computeSellerCredit(seller, remainingSales).currentCreditDebtBoxes;
+                    const sellerUpdates: Record<string, any> = { currentCreditDebtBoxes: debtAfter };
+                    if (onTime) {
+                        const next = applyOnTimePayment(seller.creditLevel, seller.onTimePaymentsCount);
+                        Object.assign(sellerUpdates, {
+                            creditLevel: next.creditLevel,
+                            onTimePaymentsCount: next.onTimePaymentsCount,
+                            maxCreditBoxes: next.maxCreditBoxes,
+                        });
+                        if (next.leveledUp) {
+                            const cfg = CREDIT_LEVELS[next.creditLevel];
+                            levelUpMsg = `🎉 ${seller.name} subió a Nivel ${next.creditLevel} (${cfg.name}): ${cfg.maxBoxes} cajas de cupo.`;
+                        }
+                    }
+                    await updateDoc(doc(db, 'users', seller.id), sellerUpdates);
+                }
+            }
+
+            toast({
+                title: "Pago Registrado",
+                description: levelUpMsg || (saleToCollect.saleType === 'Consignación'
+                    ? (onTime ? 'Cupo liberado. Pago a tiempo sumado al progreso de nivel.' : 'Cupo liberado. Pago fuera de plazo: no suma al progreso de nivel.')
+                    : undefined),
+            });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error al registrar pago' });
         }
@@ -938,8 +997,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 permissions: profileData.permissions || getDefaultPermissions(profileData.role || 'Operador'),
             };
 
-            if (profileData.role === 'Vendedor' && profileData.commissionRate !== undefined && profileData.commissionRate !== null && !isNaN(profileData.commissionRate)) {
-                cleanedProfile.commissionRate = Number(profileData.commissionRate);
+            if (profileData.role === 'Vendedor') {
+                if (profileData.commissionRate !== undefined && profileData.commissionRate !== null && !isNaN(profileData.commissionRate)) {
+                    cleanedProfile.commissionRate = Number(profileData.commissionRate);
+                }
+                const lvl = normalizeLevel(profileData.creditLevel || 1);
+                cleanedProfile.creditLevel = lvl;
+                cleanedProfile.maxCreditBoxes = getMaxCreditBoxes(lvl);
+                cleanedProfile.currentCreditDebtBoxes = 0;
+                cleanedProfile.onTimePaymentsCount = 0;
+                cleanedProfile.isLocked = false;
             }
 
             // 4. Save profile in Firestore (using primary db instance)
@@ -976,6 +1043,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                     cleanedData[k] = v;
                 }
             });
+            if (cleanedData.role === 'Vendedor' && cleanedData.creditLevel !== undefined) {
+                const lvl = normalizeLevel(cleanedData.creditLevel);
+                cleanedData.creditLevel = lvl;
+                cleanedData.maxCreditBoxes = getMaxCreditBoxes(lvl);
+            }
             await updateDoc(doc(db, 'users', id), cleanedData);
             toast({ title: "Usuario Actualizado" });
         } catch (error: any) {
@@ -984,6 +1056,23 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
     };
     
+    const updateSellerCredit = async (userId: string, data: { creditLevel?: number; isLocked?: boolean; onTimePaymentsCount?: number }) => {
+        try {
+            const updates: Record<string, any> = {};
+            if (data.creditLevel !== undefined) {
+                const lvl = normalizeLevel(data.creditLevel);
+                updates.creditLevel = lvl;
+                updates.maxCreditBoxes = getMaxCreditBoxes(lvl);
+            }
+            if (data.isLocked !== undefined) updates.isLocked = data.isLocked;
+            if (data.onTimePaymentsCount !== undefined) updates.onTimePaymentsCount = Math.max(0, data.onTimePaymentsCount);
+            await updateDoc(doc(db, 'users', userId), updates);
+            toast({ title: 'Crédito del vendedor actualizado' });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error?.message || 'No se pudo actualizar el crédito.' });
+        }
+    };
+
     const updateUserLocation = async (userId: string, location: { lat: number, lng: number }) => {
         try {
             const userRef = doc(db, 'users', userId);
@@ -1175,7 +1264,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         finishedProducts, fabricateProduct, recipes, saveRecipeAndProduct, deleteRecipeAndProduct, warehouses, transferProduct, receiveTransfer, cancelTransfer, saveWarehouse, deleteWarehouse,
         movements, sales, createSaleOrder, dispatchSaleOrder, cancelSaleOrder, collectConsignmentPayment, updateSale, customers, addCustomer, updateCustomer, deleteCustomer,
         routes, saveRoute, deleteRoute, marketProducts, saveMarketProduct, deleteMarketProduct, expenses, addExpense, updateExpense, deleteExpense, employees, addEmployee, updateEmployee, deleteEmployee,
-        users, createUser, updateUser, deleteUser, updateUserLocation, suppliers, addSupplier, updateSupplier, deleteSupplier, purchaseOrders, savePurchaseOrder, receivePurchaseOrder, cancelPurchaseOrder,
+        users, createUser, updateUser, deleteUser, updateUserLocation, updateSellerCredit, suppliers, addSupplier, updateSupplier, deleteSupplier, purchaseOrders, savePurchaseOrder, receivePurchaseOrder, cancelPurchaseOrder,
         paidPayrolls, processPayroll, productionLines, updateProductionLines, stockRequests, createStockRequest, updateStockRequestStatus, deleteStockRequest,
     };
 

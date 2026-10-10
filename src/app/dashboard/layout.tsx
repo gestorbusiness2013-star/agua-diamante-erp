@@ -52,6 +52,7 @@ const routePermissionMap: Record<string, keyof UserPermissions> = {
   '/dashboard/customers': 'customers',
   '/dashboard/routes': 'routes',
   '/dashboard/vendedores': 'vendedores',
+  '/dashboard/sellers': 'vendedores',
   '/dashboard/warehouses': 'warehouses',
   '/dashboard/sales': 'sales',
   '/dashboard/production': 'production',

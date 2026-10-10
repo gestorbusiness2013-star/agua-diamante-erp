@@ -2,8 +2,9 @@
 
 'use client';
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useInventory } from "@/context/inventory-context";
+import { computeSellerCredit } from "@/lib/seller-credit";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -54,6 +55,8 @@ export default function WarehousesPage() {
         cancelTransfer,
         movements,
         stockRequests,
+        sales,
+        users,
     } = useInventory();
     
     const [warehouseDialogOpen, setWarehouseDialogOpen] = useState(false);
@@ -71,6 +74,12 @@ export default function WarehousesPage() {
     const pendingTransfers = movements.filter(m => m.type === 'Transferencia' && m.status === 'Pendiente');
 
     const { currentUser } = useAuth();
+
+    const sellerCreditStatus = useMemo(() => {
+        if (!currentUser || currentUser.role !== 'Vendedor') return null;
+        const sellerProfile = (users || []).find(u => u.id === currentUser.id) || currentUser;
+        return computeSellerCredit(sellerProfile, sales);
+    }, [currentUser, users, sales]);
 
     const handleOpenWarehouseDialog = (warehouse?: Warehouse) => {
         if (warehouse) {
@@ -406,6 +415,7 @@ export default function WarehousesPage() {
                         customers={customers}
                         onSubmit={handleSaleSubmit}
                         onClose={() => setSaleDialogOpen(false)}
+                        creditStatus={sellerCreditStatus}
                     />
                 </DialogContent>
             </Dialog>

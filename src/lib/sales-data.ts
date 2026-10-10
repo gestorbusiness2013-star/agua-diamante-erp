@@ -38,6 +38,8 @@ export type Sale = {
     finalPaymentMethod?: 'Efectivo' | 'Transferencia' | 'Pago Móvil' | 'Punto de Venta' | 'Tarjeta' | string;
     finalReferenceNumber?: string;
     finalReceiptUrl?: string;
+    paidAt?: Date;
+    paidOnTime?: boolean;
 };
 
 /** Helper to get items from a sale, handling legacy format */

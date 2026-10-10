@@ -27,7 +27,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Textarea } from './ui/textarea';
 import type { Sale } from '@/lib/sales-data';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, ShieldAlert, Package } from 'lucide-react';
+import type { SellerCreditStatus } from '@/lib/seller-credit';
 
 const saleItemSchema = z.object({
     productName: z.string().min(1, 'Seleccione un producto.'),
@@ -57,9 +58,11 @@ interface SaleFormProps {
   onSubmit: (values: SaleFormValues, receiptFile?: File | null) => void;
   onClose: () => void;
   initialData?: Sale | null;
+  /** Estado de crédito del vendedor (solo aplica a rol Vendedor). */
+  creditStatus?: SellerCreditStatus | null;
 }
 
-export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData }: SaleFormProps) {
+export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData, creditStatus }: SaleFormProps) {
   const [availableProducts, setAvailableProducts] = useState<WarehouseStockItem[]>([]);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const isEditMode = !!initialData;
@@ -160,7 +163,16 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
+  // ── Validación de crédito por cajas (estilo Cashea) ──
+  const requestedBoxes = useMemo(
+    () => (watchedItems || []).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0),
+    [watchedItems]
+  );
+  const appliesCredit = saleType === 'Consignación' && !!creditStatus;
+  const creditBlocked = appliesCredit && (creditStatus!.isLocked || requestedBoxes > creditStatus!.availableBoxes);
+
   const handleSubmit = (values: SaleFormValues) => {
+    if (creditBlocked) return;
     onSubmit(values, receiptFile);
   };
 
@@ -409,6 +421,39 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
             </div>
         )}
 
+        {appliesCredit && creditStatus && (
+            <div className={`rounded-xl border p-3.5 space-y-2.5 ${creditBlocked ? 'border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-800/60' : 'border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800/60'}`}>
+                <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold flex items-center gap-1.5">
+                        <Package className="h-3.5 w-3.5" />
+                        Cupo de crédito · {creditStatus.levelEmoji} Nivel {creditStatus.level} ({creditStatus.levelName})
+                    </span>
+                    <span className="text-xs font-mono font-bold">
+                        {creditStatus.availableBoxes} / {creditStatus.maxCreditBoxes} cajas
+                    </span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                    <div
+                        className={`h-full rounded-full transition-all ${creditBlocked ? 'bg-red-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${Math.min(100, (creditStatus.availableBoxes / creditStatus.maxCreditBoxes) * 100)}%` }}
+                    />
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                    Esta orden solicita <strong>{requestedBoxes}</strong> cajas a consignación.
+                </p>
+                {creditBlocked && (
+                    <div className="flex items-start gap-2 rounded-lg bg-red-100 dark:bg-red-900/40 p-2.5 text-red-800 dark:text-red-200">
+                        <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
+                        <p className="text-xs font-semibold">
+                            {creditStatus.isLocked
+                                ? `Crédito bloqueado por mora${creditStatus.overdueSales ? ` (${creditStatus.overdueSales} orden(es) vencida(s))` : ''}. Cupo disponible: 0 cajas.`
+                                : `Límite de crédito insuficiente. Cupo disponible: ${creditStatus.availableBoxes} cajas.`}
+                        </p>
+                    </div>
+                )}
+            </div>
+        )}
+
         {showPaymentInfo && (
             <FormField
               control={form.control}
@@ -509,7 +554,7 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
           <Button type="button" variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit">{isEditMode ? 'Guardar Cambios' : 'Crear Orden'}</Button>
+          <Button type="submit" disabled={creditBlocked}>{isEditMode ? 'Guardar Cambios' : 'Crear Orden'}</Button>
         </div>
       </form>
     </Form>

@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { type User, type UserFormValues, userFormSchema, permissionLabels, getDefaultPermissions } from '@/lib/users-data';
+import { CREDIT_LEVELS, getMaxCreditBoxes } from '@/lib/seller-credit';
 import { Separator } from './ui/separator';
 
 interface UserFormProps {
@@ -41,6 +42,7 @@ export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFor
       ? { 
           ...initialData, 
           commissionRate: initialData.commissionRate || 0, 
+          creditLevel: initialData.creditLevel || 1,
           isEditMode: true,
           permissions: initialData.permissions || getDefaultPermissions(initialData.role)
         }
@@ -49,6 +51,7 @@ export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFor
           email: '',
           role: 'Operador',
           commissionRate: 0,
+          creditLevel: 1,
           password: '',
           confirmPassword: '',
           isEditMode: false,
@@ -61,6 +64,7 @@ export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFor
       form.reset({
         ...initialData,
         commissionRate: initialData.commissionRate || 0,
+        creditLevel: initialData.creditLevel || 1,
         isEditMode: true,
         permissions: initialData.permissions || getDefaultPermissions(initialData.role)
       });
@@ -70,6 +74,7 @@ export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFor
         email: '',
         role: 'Operador',
         commissionRate: 0,
+        creditLevel: 1,
         password: '',
         confirmPassword: '',
         isEditMode: false,
@@ -154,19 +159,47 @@ export function UserForm({ initialData, isEditMode, onSubmit, onClose }: UserFor
         />
         
         {selectedRole === 'Vendedor' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 rounded-xl bg-muted/30 border">
             <FormField
-            control={form.control}
-            name="commissionRate"
-            render={({ field }) => (
+              control={form.control}
+              name="commissionRate"
+              render={({ field }) => (
                 <FormItem>
-                <FormLabel>Tasa de Comisión (%)</FormLabel>
-                <FormControl>
+                  <FormLabel>Tasa de Comisión (%)</FormLabel>
+                  <FormControl>
                     <Input type="number" placeholder="e.g., 5" {...field} />
-                </FormControl>
-                <FormMessage />
+                  </FormControl>
+                  <FormMessage />
                 </FormItem>
-            )}
+              )}
             />
+            <FormField
+              control={form.control}
+              name="creditLevel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nivel de Crédito Cashea</FormLabel>
+                  <Select
+                    onValueChange={(val) => field.onChange(Number(val))}
+                    value={String(field.value || 1)}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccione nivel" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="1">🥉 Nivel 1 · Bronce (20 cajas)</SelectItem>
+                      <SelectItem value="2">🥈 Nivel 2 · Plata (40 cajas)</SelectItem>
+                      <SelectItem value="3">🥇 Nivel 3 · Oro (100 cajas)</SelectItem>
+                      <SelectItem value="4">💎 Nivel 4 · Diamante (250 cajas)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         )}
 
         <div className="space-y-3">

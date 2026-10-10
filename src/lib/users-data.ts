@@ -71,6 +71,12 @@ export type User = {
     lastLocationTimestamp?: Timestamp;
     locationHistory?: LocationPoint[];
     permissions?: UserPermissions;
+    // ── Crédito gamificado (estilo Cashea) ──
+    creditLevel?: number;            // 1 a 4 (default 1)
+    maxCreditBoxes?: number;         // 20 / 40 / 100 / 250 según nivel
+    currentCreditDebtBoxes?: number; // cajas retiradas pendientes por pagar (snapshot)
+    onTimePaymentsCount?: number;    // pagos a tiempo acumulados en el nivel actual
+    isLocked?: boolean;              // bloqueo manual por mora
 };
 
 export const userFormSchema = z.object({
@@ -78,6 +84,7 @@ export const userFormSchema = z.object({
   email: z.string().email('El correo electrónico no es válido.'),
   role: z.enum(['Admin', 'Administración', 'Operador', 'Supervisor', 'Gerente de Planta', 'Vendedor']),
   commissionRate: z.coerce.number().min(0, 'La comisión no puede ser negativa.').optional(),
+  creditLevel: z.coerce.number().min(1).max(4).optional().default(1),
   password: z.string().optional(),
   confirmPassword: z.string().optional(),
   isEditMode: z.boolean(),
@@ -132,5 +139,5 @@ export const initialUsers: Omit<User, 'id'>[] = [
     { name: "Jorge Martinez", email: "jorge.martinez@example.com", role: "Supervisor" },
     { name: "Usuario Principal", email: "GESTORBUSINESS2013@gmail.com", role: "Admin" },
     { name: "Robert Davi", email: "robertdavi@hotmail.com", role: "Admin" },
-    { name: "Sofia Vivas", email: "vendedor@example.com", role: "Vendedor", commissionRate: 5 },
+    { name: "Sofia Vivas", email: "vendedor@example.com", role: "Vendedor", commissionRate: 5, creditLevel: 1, maxCreditBoxes: 20, currentCreditDebtBoxes: 0, onTimePaymentsCount: 0, isLocked: false },
 ];

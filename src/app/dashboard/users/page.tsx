@@ -14,6 +14,7 @@ import { UserForm } from "@/components/user-form";
 import type { User, UserFormValues } from "@/lib/users-data";
 import { useInventory } from "@/context/inventory-context";
 import { useToast } from "@/hooks/use-toast";
+import { CREDIT_LEVELS, normalizeLevel } from "@/lib/seller-credit";
 
 export default function UsersPage() {
     const { users, createUser, updateUser, deleteUser } = useInventory();
@@ -38,6 +39,7 @@ export default function UsersPage() {
                     name: values.name,
                     role: values.role,
                     commissionRate: values.commissionRate,
+                    creditLevel: values.role === 'Vendedor' ? (values.creditLevel || selectedUser.creditLevel || 1) : undefined,
                     permissions: values.permissions
                 });
             } else {
@@ -56,33 +58,55 @@ export default function UsersPage() {
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle>Gestión de Acceso</CardTitle>
-                        <CardDescription>Controla quién puede entrar al ERP y sus comisiones.</CardDescription>
+                        <CardDescription>Controla quién puede entrar al ERP, comisiones y límites de crédito.</CardDescription>
                     </div>
                     <Button onClick={() => handleOpenUserDialog()}><UserPlus className="mr-2 h-4 w-4" />Crear Usuario</Button>
                 </CardHeader>
                 <CardContent>
                     <Table>
-                        <TableHeader><TableRow><TableHead>Usuario</TableHead><TableHead>Rol</TableHead><TableHead className="text-right">Comisión</TableHead><TableHead></TableHead></TableRow></TableHeader>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Usuario</TableHead>
+                                <TableHead>Rol</TableHead>
+                                <TableHead>Nivel Cashea</TableHead>
+                                <TableHead className="text-right">Comisión</TableHead>
+                                <TableHead></TableHead>
+                            </TableRow>
+                        </TableHeader>
                         <TableBody>
-                            {users.map(u => (
-                                <TableRow key={u.id}>
-                                    <TableCell className="flex items-center gap-3">
-                                        <Avatar className="h-8 w-8"><AvatarFallback>{u.name?.[0] || '?'}</AvatarFallback></Avatar>
-                                        <div className="flex flex-col"><span className="font-medium">{u.name || 'Usuario'}</span><span className="text-xs text-muted-foreground">{u.email}</span></div>
-                                    </TableCell>
-                                    <TableCell><Badge variant="outline">{u.role}</Badge></TableCell>
-                                    <TableCell className="text-right">{u.role === 'Vendedor' ? `${u.commissionRate}%` : 'N/A'}</TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleOpenUserDialog(u)}>Editar</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => { setUserToDelete(u); setDeleteAlertOpen(true); }} className="text-destructive">Eliminar</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                            {users.map(u => {
+                                const sellerLevel = u.role === 'Vendedor' ? normalizeLevel(u.creditLevel) : null;
+                                const levelCfg = sellerLevel ? CREDIT_LEVELS[sellerLevel] : null;
+
+                                return (
+                                    <TableRow key={u.id}>
+                                        <TableCell className="flex items-center gap-3">
+                                            <Avatar className="h-8 w-8"><AvatarFallback>{u.name?.[0] || '?'}</AvatarFallback></Avatar>
+                                            <div className="flex flex-col"><span className="font-medium">{u.name || 'Usuario'}</span><span className="text-xs text-muted-foreground">{u.email}</span></div>
+                                        </TableCell>
+                                        <TableCell><Badge variant="outline">{u.role}</Badge></TableCell>
+                                        <TableCell>
+                                            {levelCfg ? (
+                                                <Badge className="font-semibold text-xs border shadow-xs bg-muted/60 text-foreground hover:bg-muted">
+                                                    {levelCfg.emoji} Nivel {sellerLevel} ({levelCfg.maxBoxes} cajas)
+                                                </Badge>
+                                            ) : (
+                                                <span className="text-muted-foreground text-xs">-</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-right">{u.role === 'Vendedor' ? `${u.commissionRate}%` : 'N/A'}</TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleOpenUserDialog(u)}>Editar</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => { setUserToDelete(u); setDeleteAlertOpen(true); }} className="text-destructive">Eliminar</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </CardContent>
