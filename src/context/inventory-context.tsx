@@ -561,7 +561,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             }));
             const totalAmount = saleItems.reduce((sum, item) => sum + item.subtotal, 0);
             let commissionAmount: number | null = null;
-            if (currentUser.role === 'Vendedor' && currentUser.commissionRate) {
+            if (currentUser.role === 'Vendedor' && currentUser.commissionRate && values.saleType !== 'Cortesía') {
                 commissionAmount = totalAmount * (currentUser.commissionRate / 100);
             }
 
@@ -653,9 +653,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                     date: new Date(),
                     productName: productSummary,
                     quantity: saleItems.reduce((sum: number, i) => sum + i.quantity, 0),
-                    type: 'Venta',
+                    type: saleToDispatch.saleType === 'Cortesía' ? 'Cortesía' : 'Venta',
                     user: currentUser.name,
-                    details: `Vendido a ${saleToDispatch.customerName} desde ${warehouseData.name}`,
+                    details: saleToDispatch.saleType === 'Cortesía'
+                        ? `Cortesía entregada a ${saleToDispatch.customerName} desde ${warehouseData.name}`
+                        : `Vendido a ${saleToDispatch.customerName} desde ${warehouseData.name}`,
                     reference: newInvoiceNumber,
                     status: 'Completado'
                 });

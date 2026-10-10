@@ -32,7 +32,7 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 const saleItemSchema = z.object({
     productName: z.string().min(1, 'Seleccione un producto.'),
     quantity: z.coerce.number().positive('Cantidad debe ser positiva.'),
-    unitPrice: z.coerce.number().positive('Precio debe ser positivo.'),
+    unitPrice: z.coerce.number().min(0, 'Precio no puede ser negativo.'),
 });
 
 const formSchema = z.object({
@@ -41,7 +41,7 @@ const formSchema = z.object({
   customerId: z.string().min(1, 'Seleccione un cliente.'),
   customerName: z.string().min(1, 'El nombre del cliente es requerido.'),
   description: z.string().optional(),
-  saleType: z.enum(['Directa', 'Consignación'], { required_error: 'Seleccione un tipo de venta.'}),
+  saleType: z.enum(['Directa', 'Consignación', 'Cortesía'], { required_error: 'Seleccione un tipo de venta.'}),
   paymentMethod: z.enum(['Efectivo', 'Transferencia', 'Pago Móvil', 'Punto de Venta', 'Tarjeta'], { required_error: 'Seleccione un método de pago.' }),
   documentType: z.enum(['Factura', 'Nota de Entrega'], { required_error: 'Seleccione un tipo de documento.' }),
   referenceNumber: z.string().optional(),
@@ -113,9 +113,6 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
   const saleType = form.watch('saleType');
   const partialPaymentAmount = form.watch('partialPaymentAmount') || 0;
 
-  const showPaymentInfo = saleType === 'Directa' || (saleType === 'Consignación' && partialPaymentAmount > 0);
-  const requiresReceipt = showPaymentInfo && ['Transferencia', 'Pago Móvil', 'Punto de Venta'].includes(paymentMethod);
-
   const totalAmount = useMemo(() => {
       return (watchedItems || []).reduce((sum, item) => {
           const qty = Number(item.quantity) || 0;
@@ -123,6 +120,21 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
           return sum + (qty * price);
       }, 0);
   }, [watchedItems]);
+
+  const showPaymentInfo = (saleType === 'Directa' && totalAmount > 0) || (saleType === 'Consignación' && partialPaymentAmount > 0);
+  const requiresReceipt = showPaymentInfo && ['Transferencia', 'Pago Móvil', 'Punto de Venta'].includes(paymentMethod);
+
+  // Cuando se selecciona Cortesía, poner los precios unitarios en 0 automáticamente
+  useEffect(() => {
+    if (saleType === 'Cortesía') {
+      const currentItems = form.getValues('items') || [];
+      const updated = currentItems.map(item => ({ ...item, unitPrice: 0 }));
+      form.setValue('items', updated);
+      if (!isEditMode) {
+        form.setValue('documentType', 'Nota de Entrega');
+      }
+    }
+  }, [saleType, form, isEditMode]);
 
   useEffect(() => {
     if (selectedWarehouseId) {
@@ -332,14 +344,20 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
                 <FormItem className="space-y-2 pt-4 border-t">
                     <FormLabel>Tipo de Venta</FormLabel>
                     <FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex items-center space-x-4">
+                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-wrap items-center gap-4">
                             <FormItem className="flex items-center space-x-2 space-y-0">
                                 <FormControl><RadioGroupItem value="Directa" /></FormControl>
-                                <FormLabel className="font-normal">Directa</FormLabel>
+                                <FormLabel className="font-normal cursor-pointer">Directa</FormLabel>
                             </FormItem>
                             <FormItem className="flex items-center space-x-2 space-y-0">
                                 <FormControl><RadioGroupItem value="Consignación" /></FormControl>
-                                <FormLabel className="font-normal">Consignación</FormLabel>
+                                <FormLabel className="font-normal cursor-pointer">Consignación</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                                <FormControl><RadioGroupItem value="Cortesía" /></FormControl>
+                                <FormLabel className="font-normal cursor-pointer flex items-center gap-1.5 text-purple-700 dark:text-purple-300 font-semibold">
+                                    <span>🎁 Cortesía</span>
+                                </FormLabel>
                             </FormItem>
                         </RadioGroup>
                     </FormControl>
@@ -347,6 +365,18 @@ export function SaleForm({ warehouses, customers, onSubmit, onClose, initialData
                 </FormItem>
             )}
         />
+
+        {saleType === 'Cortesía' && (
+            <div className="rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/50 p-3.5 text-xs text-purple-900 dark:text-purple-200 flex items-start gap-2.5 shadow-xs">
+                <span className="text-lg leading-none">🎁</span>
+                <div className="space-y-1">
+                    <p className="font-semibold text-purple-950 dark:text-purple-100">Venta de Cortesía / Muestra sin Costo</p>
+                    <p className="text-muted-foreground leading-relaxed text-[11px]">
+                        El precio de los productos se establece en <strong>$0.00</strong>. Al despachar la orden, se descontará automáticamente la cantidad correspondiente del inventario del almacén seleccionado.
+                    </p>
+                </div>
+            </div>
+        )}
 
         {saleType === 'Consignación' && (
             <div className="grid grid-cols-2 gap-4 pt-4 border-t">

@@ -331,7 +331,8 @@ export default function SalesPage() {
         const halfPage = pageHeight / 2;
     
         const drawContent = (yOffset: number, isCopy: boolean) => {
-            const docTitle = sale.documentType === 'Factura' ? 'Factura' : 'Nota de Entrega';
+            const baseTitle = sale.documentType === 'Factura' ? 'Factura' : 'Nota de Entrega';
+            const docTitle = sale.saleType === 'Cortesía' ? `${baseTitle} (Cortesía)` : baseTitle;
             const saleDate = format(new Date(sale.date), 'dd/MM/yyyy', { locale: es });
     
             doc.setFontSize(20);
@@ -365,7 +366,7 @@ export default function SalesPage() {
                     2: { halign: 'right' },
                     3: { halign: 'right' },
                 },
-                foot: [['', '', 'TOTAL:', formatCurrency(sale.totalAmount)]],
+                foot: [['', '', 'TOTAL:', sale.saleType === 'Cortesía' ? '$0.00 (Cortesía)' : formatCurrency(sale.totalAmount)]],
                 footStyles: {
                     fillColor: [240, 240, 240],
                     textColor: [0, 0, 0],
@@ -375,10 +376,17 @@ export default function SalesPage() {
     
             const finalY = (doc as any).lastAutoTable.finalY || (yOffset + 60);
     
+            if (sale.saleType === 'Cortesía') {
+                doc.setFontSize(9);
+                doc.setTextColor(120);
+                doc.text("* Entrega de Cortesía / Muestra sin valor comercial.", margin, finalY + 6);
+                doc.setTextColor(0);
+            }
+
             if (sale.description) {
                 doc.setFontSize(9);
-                doc.text("Notas:", margin, finalY + 10);
-                doc.text(sale.description, margin, finalY + 14, { maxWidth: pageWidth - (margin * 2) });
+                doc.text("Notas:", margin, finalY + (sale.saleType === 'Cortesía' ? 12 : 10));
+                doc.text(sale.description, margin, finalY + (sale.saleType === 'Cortesía' ? 16 : 14), { maxWidth: pageWidth - (margin * 2) });
             }
             
             doc.setFontSize(10);
@@ -498,6 +506,16 @@ export default function SalesPage() {
         const saleType = sale.saleType;
         const baseClasses = "capitalize";
 
+        if (saleType === 'Cortesía') {
+            if (status === 'Pendiente') {
+                return { className: cn(baseClasses, "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100"), label: "Cortesía Pendiente" };
+            }
+            if (status === 'Cancelado') {
+                return { className: cn(baseClasses, "bg-red-100 text-red-800 border-red-200 hover:bg-red-100"), label: "Cancelado" };
+            }
+            return { className: cn(baseClasses, "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100"), label: "Cortesía Entregada" };
+        }
+
         if (status === 'Pendiente') {
             return { className: cn(baseClasses, "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100"), label: "Pendiente" };
         }
@@ -505,8 +523,8 @@ export default function SalesPage() {
             return { className: cn(baseClasses, "bg-red-100 text-red-800 border-red-200 hover:bg-red-100"), label: "Por Pagar" };
         }
         if (status === 'Despachado') {
-            const label = saleType === 'Consignación' ? "Consignación" : "Pago Parcial";
-            return { className: cn(baseClasses, "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100"), label: label };
+            const label = saleType === 'Consignación' ? "Consignación" : (sale.partialPaymentAmount ? "Pago Parcial" : "Despachado");
+            return { className: cn(baseClasses, "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100"), label: label };
         }
         if (status === 'Pagado') {
             return { className: cn(baseClasses, "bg-green-100 text-green-800 border-green-200 hover:bg-green-100"), label: "Pagado" };
@@ -600,13 +618,24 @@ export default function SalesPage() {
                                             })()}
                                         </TableCell>
                                         <TableCell className="hidden sm:table-cell text-right font-mono">
-                                            <div>{formatCurrency(sale.totalAmount)}</div>
-                                            {sale.partialPaymentAmount ? (
-                                                <div className="text-xs text-muted-foreground mt-1">Abono: {formatCurrency(sale.partialPaymentAmount)}</div>
-                                            ) : null}
-                                            {sale.partialPaymentAmount ? (
-                                                <div className="text-xs text-red-500 font-medium">Resta: {formatCurrency(sale.totalAmount - sale.partialPaymentAmount)}</div>
-                                            ) : null}
+                                            {sale.saleType === 'Cortesía' ? (
+                                                <div>
+                                                    <div className="font-semibold text-purple-700 dark:text-purple-400">$0.00</div>
+                                                    <span className="inline-block text-[10px] font-sans px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 font-medium">
+                                                        Cortesía
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div>{formatCurrency(sale.totalAmount)}</div>
+                                                    {sale.partialPaymentAmount ? (
+                                                        <div className="text-xs text-muted-foreground mt-1">Abono: {formatCurrency(sale.partialPaymentAmount)}</div>
+                                                    ) : null}
+                                                    {sale.partialPaymentAmount ? (
+                                                        <div className="text-xs text-red-500 font-medium">Resta: {formatCurrency(sale.totalAmount - sale.partialPaymentAmount)}</div>
+                                                    ) : null}
+                                                </>
+                                            )}
                                         </TableCell>
                                         <TableCell className="hidden lg:table-cell text-right font-mono text-emerald-500">
                                             {sale.commissionAmount ? formatCurrency(sale.commissionAmount) : <span className="text-muted-foreground">-</span>}

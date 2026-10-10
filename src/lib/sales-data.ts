@@ -22,7 +22,7 @@ export type Sale = {
     customerName: string;
     customerId: string;
     totalAmount: number;
-    saleType: 'Directa' | 'Consignación';
+    saleType: 'Directa' | 'Consignación' | 'Cortesía';
     paymentMethod: 'Efectivo' | 'Transferencia' | 'Pago Móvil' | 'Punto de Venta' | 'Tarjeta';
     documentType: 'Factura' | 'Nota de Entrega';
     invoiceNumber: string;
