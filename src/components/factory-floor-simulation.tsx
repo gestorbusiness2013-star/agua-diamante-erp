@@ -152,113 +152,264 @@ export function FactoryFloorSimulation({
       {/* ── Layout: Exterior + Galpón ── */}
       <div className="flex flex-col lg:flex-row gap-3 min-h-[440px]">
 
-        {/* ═══ EXTERIOR IZQUIERDO – Cisterna & Pozo ═══ */}
-        <div className="flex flex-col gap-3 lg:w-[170px] shrink-0">
-          {/* Bahía Zona D – Cisternas */}
-          <div
-            className="flex flex-col items-center justify-center gap-2 flex-1
-                       rounded-2xl border border-dashed border-border/60 bg-muted/20 p-3 cursor-pointer
-                       hover:border-blue-400/60 hover:bg-blue-950/20 transition-all group"
-            onMouseEnter={(e) =>
-              showTooltip(e, {
-                title: 'Bahía Zona D – Cisternas',
-                lines: [
-                  { label: 'Agua cisterna', value: `${totalZoneD.toLocaleString('es-ES')} un.` },
-                  { label: 'Estado', value: 'En operación' },
-                  { label: 'Producto', value: zoneD[0]?.name ?? '—' },
-                ],
-              })
-            }
-            onMouseMove={moveTooltip}
-            onMouseLeave={hideTooltip}
-          >
-            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-0.5">
-              Exterior · Zona D
+        {/* ═══ EXTERIOR IZQUIERDO – Circuito Hídrico & Llenado de Cisternas (Zona D) ═══ */}
+        <div
+          className="flex flex-col lg:w-[260px] shrink-0 rounded-2xl border border-dashed border-cyan-500/30 bg-gradient-to-b from-blue-950/25 via-slate-900/40 to-blue-950/25 p-3 cursor-pointer hover:border-cyan-400/50 transition-all group"
+          onMouseEnter={(e) =>
+            showTooltip(e, {
+              title: 'Circuito Hídrico & Bahía de Cisternas (Zona D)',
+              lines: [
+                { label: 'Proceso', value: 'Pozo → Desbarradores → Tanques → Llenadero' },
+                { label: 'Stock disponible', value: `${totalZoneD.toLocaleString('es-ES')} recipientes/cargas (Zona D)` },
+                { label: 'Tarifa de despacho', value: '$1.00 cada 1.000 Litros' },
+                { label: 'Agua captada', value: formattedVolume },
+                { label: 'Estado bahía', value: '🟢 Llenado activo en bahía' },
+              ],
+            })
+          }
+          onMouseMove={moveTooltip}
+          onMouseLeave={hideTooltip}
+        >
+          {/* Header exterior con badge de tarifa */}
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/40">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                <Waves className="h-3.5 w-3.5 text-cyan-400" />
+                Exterior · Zona D
+              </div>
+              <p className="text-[9px] text-muted-foreground">Circuito Hídrico Exterior</p>
             </div>
-
-            {/* Camión esquemático */}
-            <div className="relative flex flex-col items-center gap-1">
-              {/* Cabina */}
-              <div className="w-12 h-8 rounded-tl-xl rounded-tr-md rounded-bl-sm rounded-br-sm
-                              bg-gradient-to-b from-blue-600 to-blue-700 border border-blue-500/50
-                              flex items-center justify-center shadow-lg shadow-blue-900/40">
-                <Truck className="h-3.5 w-3.5 text-white" />
-              </div>
-              {/* Cisterna */}
-              <div className="w-16 h-6 rounded-full bg-gradient-to-b from-slate-400 to-slate-600
-                              border border-slate-300/40 shadow-inner flex items-center justify-center">
-                <span className="text-[8px] font-bold text-white/80 tracking-wide">CISTERNA</span>
-              </div>
-              {/* Manguera animada */}
-              <div className="flex items-center gap-0.5 mt-0.5">
-                <div className="w-5 h-1 rounded-full bg-blue-400/70 animate-pulse" />
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-300 animate-bounce" />
-              </div>
-              {/* Ruedas */}
-              <div className="flex gap-5 -mt-1">
-                <div className="w-3.5 h-3.5 rounded-full bg-gray-800 border-2 border-gray-500" />
-                <div className="w-3.5 h-3.5 rounded-full bg-gray-800 border-2 border-gray-500" />
-              </div>
-            </div>
-
-            {/* Métrica */}
-            <div className="mt-1 text-center">
-              <div className="text-xs font-bold text-blue-300 font-mono">{totalZoneD.toLocaleString('es-ES')}</div>
-              <div className="text-[9px] text-muted-foreground">un. agua cisterna</div>
-              <Badge variant="outline" className="mt-1 text-[9px] py-0 px-1.5 border-blue-500/40 text-blue-400">
-                Zona D
-              </Badge>
-            </div>
+            {/* Indicador de Tarifa visible */}
+            <Badge className="bg-emerald-950/70 border border-emerald-500/50 text-emerald-300 text-[10px] font-mono font-semibold px-2 py-0.5 shadow-sm">
+              $1.00 / 1.000 L
+            </Badge>
           </div>
 
-          {/* Pozo & Planta de Tratamiento */}
-          <div
-            className="flex flex-col items-center justify-center gap-2 flex-1
-                       rounded-2xl border border-dashed border-cyan-500/30 bg-cyan-950/20 p-3 cursor-pointer
-                       hover:border-cyan-400/60 hover:bg-cyan-950/40 transition-all group"
-            onMouseEnter={(e) =>
-              showTooltip(e, {
-                title: 'Pozo & Planta de Tratamiento',
-                lines: [
-                  { label: 'Volumen total', value: `${totalVolumeL.toLocaleString('es-ES')} Lts` },
-                  { label: 'Estado', value: '🟢 Nivel Óptimo' },
-                  { label: 'Fuentes', value: volumeList.length > 0 ? volumeList.map((i) => i.name).join(', ') : 'Agua de Pozo' },
-                  { label: 'Destino', value: 'Alimentación a líneas' },
-                ],
-              })
-            }
-            onMouseMove={moveTooltip}
-            onMouseLeave={hideTooltip}
-          >
-            <div className="text-[10px] font-bold uppercase tracking-widest text-cyan-400/80 flex items-center gap-1">
-              <Waves className="h-3 w-3" />
-              Pozo & Filtros
+          {/* ── Cadena de Proceso Conectada por Tuberías ── */}
+          <div className="flex flex-col flex-1 justify-between">
+            {/* 1. Pozo Profundo (Captación) */}
+            <div
+              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/70 border border-cyan-500/20 hover:border-cyan-400/40 transition-colors"
+              onMouseEnter={(e) => {
+                e.stopPropagation();
+                showTooltip(e, {
+                  title: '1. Pozo Profundo (Captación)',
+                  lines: [
+                    { label: 'Proceso', value: 'Captación subterránea primaria' },
+                    { label: 'Reserva', value: formattedVolume },
+                    { label: 'Estado', value: '🟢 Bombeo activo a desbarradores' },
+                  ],
+                });
+              }}
+              onMouseMove={moveTooltip}
+              onMouseLeave={hideTooltip}
+            >
+              <div className="w-8 h-8 rounded-lg bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center shrink-0 shadow-inner">
+                <Waves className="h-4 w-4 text-cyan-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-foreground">Pozo Profundo</span>
+                  <span className="text-[9px] font-mono text-cyan-300 font-semibold">{formattedVolume}</span>
+                </div>
+                <p className="text-[9px] text-muted-foreground truncate">Captación de agua cruda</p>
+              </div>
             </div>
 
-            {/* Tanque cilíndrico esquemático con agua animada */}
-            <div className="relative w-14 h-14 rounded-xl border-2 border-cyan-400/50 bg-slate-900/90 overflow-hidden shadow-inner flex flex-col justify-end">
-              <div
-                className="w-full bg-gradient-to-t from-cyan-600 to-cyan-400/80 relative"
-                style={{ height: '75%' }}
-              >
+            {/* Tubería animada 1: Pozo → Desbarradores */}
+            <div className="relative flex items-center justify-center h-4 my-0.5">
+              <div className="w-1.5 h-full bg-slate-800 rounded-full overflow-hidden relative border border-slate-700/60 shadow-inner">
                 <div
-                  className="absolute inset-x-0 top-0 h-1 bg-cyan-200/80"
-                  style={{ animation: 'waterWave 2s ease-in-out infinite alternate' }}
+                  className="w-full h-full bg-gradient-to-b from-cyan-400 via-blue-400 to-cyan-400"
+                  style={{
+                    backgroundSize: '100% 8px',
+                    animation: 'fluidFlow 0.8s linear infinite',
+                  }}
                 />
               </div>
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="text-[8px] font-bold text-white drop-shadow">POZO</span>
+              <span className="absolute right-2 text-[8px] font-mono text-cyan-400/60">↓ agua cruda</span>
+            </div>
+
+            {/* 2. Batería de Desbarradores (Desarenadores / Filtración Primaria) */}
+            <div
+              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/70 border border-blue-500/20 hover:border-blue-400/40 transition-colors"
+              onMouseEnter={(e) => {
+                e.stopPropagation();
+                showTooltip(e, {
+                  title: '2. Batería de Desbarradores',
+                  lines: [
+                    { label: 'Etapa', value: 'Desarenado y decantación inicial' },
+                    { label: 'Función', value: 'Eliminación de sólidos y arenas' },
+                    { label: 'Estado', value: '🟢 Flujo continuo sin turbidez' },
+                  ],
+                });
+              }}
+              onMouseMove={moveTooltip}
+              onMouseLeave={hideTooltip}
+            >
+              <div className="w-8 h-8 rounded-lg bg-blue-950/80 border border-blue-500/40 flex items-center justify-center gap-0.5 shrink-0 shadow-inner">
+                <div className="w-1.5 h-5 rounded-t-sm rounded-b-md bg-gradient-to-b from-slate-400 to-amber-700/70 border border-slate-400/50" />
+                <div className="w-1.5 h-5 rounded-t-sm rounded-b-md bg-gradient-to-b from-slate-400 to-amber-700/70 border border-slate-400/50" />
+                <div className="w-1.5 h-5 rounded-t-sm rounded-b-md bg-gradient-to-b from-slate-400 to-amber-700/70 border border-slate-400/50" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-foreground">Desbarradores</span>
+                  <Badge variant="outline" className="text-[8px] py-0 px-1 border-blue-500/40 text-blue-300">
+                    Primaria
+                  </Badge>
+                </div>
+                <p className="text-[9px] text-muted-foreground truncate">Batería de desarenado</p>
               </div>
             </div>
 
-            {/* Métrica volumen */}
-            <div className="text-center">
-              <div className="text-xs font-bold text-cyan-300 font-mono">
-                {formattedVolume}
+            {/* Tubería animada 2: Desbarradores → Tanques */}
+            <div className="relative flex items-center justify-center h-4 my-0.5">
+              <div className="w-1.5 h-full bg-slate-800 rounded-full overflow-hidden relative border border-slate-700/60 shadow-inner">
+                <div
+                  className="w-full h-full bg-gradient-to-b from-cyan-400 via-blue-400 to-cyan-400"
+                  style={{
+                    backgroundSize: '100% 8px',
+                    animation: 'fluidFlow 0.8s linear infinite',
+                  }}
+                />
               </div>
-              <Badge variant="outline" className="mt-1 text-[9px] py-0 px-1.5 border-cyan-500/40 text-cyan-300 bg-cyan-950/50">
-                Nivel Óptimo
-              </Badge>
+              <span className="absolute right-2 text-[8px] font-mono text-cyan-400/60">↓ agua clarificada</span>
+            </div>
+
+            {/* 3. Tanques de Almacenamiento de Agua Tratada */}
+            <div
+              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/70 border border-cyan-500/20 hover:border-cyan-400/40 transition-colors"
+              onMouseEnter={(e) => {
+                e.stopPropagation();
+                showTooltip(e, {
+                  title: '3. Tanques de Agua Tratada',
+                  lines: [
+                    { label: 'Capacidad', value: 'Batería de tanques de reserva' },
+                    { label: 'Calidad', value: 'Agua tratada y desinfectada' },
+                    { label: 'Nivel', value: 'Nivel Óptimo (95%)' },
+                    { label: 'Distribución', value: 'Llenadero de cisternas y fábrica' },
+                  ],
+                });
+              }}
+              onMouseMove={moveTooltip}
+              onMouseLeave={hideTooltip}
+            >
+              <div className="w-8 h-8 rounded-lg bg-slate-950 border border-cyan-400/50 relative overflow-hidden shrink-0 shadow-inner flex flex-col justify-end">
+                <div
+                  className="w-full bg-gradient-to-t from-cyan-600 to-cyan-400/80 relative"
+                  style={{ height: '75%' }}
+                >
+                  <div
+                    className="absolute inset-x-0 top-0 h-1 bg-cyan-200/80"
+                    style={{ animation: 'waterWave 2s ease-in-out infinite alternate' }}
+                  />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <span className="text-[7.5px] font-bold text-white drop-shadow">H₂O</span>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-foreground">Tanques Tratada</span>
+                  <Badge variant="outline" className="text-[8px] py-0 px-1 border-cyan-500/40 text-cyan-300">
+                    Óptimo
+                  </Badge>
+                </div>
+                <p className="text-[9px] text-muted-foreground truncate">Pulmón de almacenamiento</p>
+              </div>
+            </div>
+
+            {/* Tubería animada 3: Tanques → Brazo de Llenado */}
+            <div className="relative flex items-center justify-center h-4 my-0.5">
+              <div className="w-1.5 h-full bg-slate-800 rounded-full overflow-hidden relative border border-slate-700/60 shadow-inner">
+                <div
+                  className="w-full h-full bg-gradient-to-b from-cyan-400 via-blue-400 to-cyan-400"
+                  style={{
+                    backgroundSize: '100% 8px',
+                    animation: 'fluidFlow 0.8s linear infinite',
+                  }}
+                />
+              </div>
+              <span className="absolute right-2 text-[8px] font-mono text-cyan-400/60">↓ línea a cisterna</span>
+            </div>
+
+            {/* 4. Bahía de Carga / Brazo de Llenado & Camión Cisterna */}
+            <div
+              className="flex flex-col items-center p-2.5 rounded-xl bg-gradient-to-b from-slate-900/80 to-blue-950/40 border border-blue-500/30 hover:border-blue-400/60 transition-colors group relative"
+              onMouseEnter={(e) => {
+                e.stopPropagation();
+                showTooltip(e, {
+                  title: 'Bahía de Llenado de Cisternas (Zona D)',
+                  lines: [
+                    { label: 'Proceso', value: 'Pozo → Desbarradores → Tanques → Llenadero' },
+                    { label: 'Stock disponible', value: `${totalZoneD.toLocaleString('es-ES')} recipientes/cargas (Zona D)` },
+                    { label: 'Tarifa de despacho', value: '$1.00 cada 1.000 Litros' },
+                    { label: 'Producto', value: zoneD[0]?.name ?? 'Agua en Cisterna' },
+                    { label: 'Brazo de llenado', value: '🟢 Manguera activa conectada' },
+                  ],
+                });
+              }}
+              onMouseMove={moveTooltip}
+              onMouseLeave={hideTooltip}
+            >
+              {/* Brazo de carga (Gantry) sobre el camión */}
+              <div className="w-full flex items-center justify-between mb-1 px-1">
+                <span className="text-[8px] font-mono font-medium text-cyan-300">Brazo de carga</span>
+                {/* Viga y brazo articulado */}
+                <div className="relative flex items-center">
+                  <div className="h-1.5 w-16 bg-gradient-to-r from-slate-500 to-slate-400 rounded-sm" />
+                  {/* Codo y manguera descendente */}
+                  <div className="w-1.5 h-3 bg-cyan-400 rounded-b-sm relative -ml-3">
+                    <div className="w-full h-full bg-cyan-300 animate-pulse" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Camión cisterna esquemático */}
+              <div className="relative flex flex-col items-center gap-0.5 my-1 w-full">
+                <div className="flex items-end justify-center gap-1 w-full">
+                  {/* Cabina camión */}
+                  <div className="w-10 h-7 rounded-tl-lg rounded-tr-sm rounded-bl-sm rounded-br-sm bg-gradient-to-b from-blue-600 to-blue-800 border border-blue-400/50 flex items-center justify-center shadow-md shadow-blue-950">
+                    <Truck className="h-3.5 w-3.5 text-white" />
+                  </div>
+
+                  {/* Tanque cisterna con boca de carga alineada */}
+                  <div className="relative">
+                    {/* Boca superior de llenado con manguera activa */}
+                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 flex items-center gap-0.5">
+                      <div className="w-3 h-1.5 bg-yellow-400/90 rounded-t-sm shadow-sm" />
+                      <div className="w-1 h-2 bg-cyan-400 animate-pulse rounded-full" />
+                    </div>
+                    {/* Cilindro cisterna */}
+                    <div className="w-20 h-7 rounded-full bg-gradient-to-r from-slate-400 via-slate-200 to-slate-400 border border-slate-300 shadow-inner flex items-center justify-center">
+                      <span className="text-[7.5px] font-bold text-slate-800 tracking-wider">CISTERNA</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ruedas camión */}
+                <div className="flex gap-4 -mt-1 justify-center w-full">
+                  <div className="w-3 h-3 rounded-full bg-gray-950 border-2 border-gray-500 shadow" />
+                  <div className="w-3 h-3 rounded-full bg-gray-950 border-2 border-gray-500 shadow" />
+                  <div className="w-3 h-3 rounded-full bg-gray-950 border-2 border-gray-500 shadow" />
+                </div>
+              </div>
+
+              {/* Métricas y tarifa de Zona D */}
+              <div className="w-full mt-2 pt-2 border-t border-border/40 text-center space-y-1">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-muted-foreground font-medium">Stock Zona D:</span>
+                  <span className="font-mono font-bold text-cyan-300">{totalZoneD.toLocaleString('es-ES')} cargas</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-muted-foreground font-medium">Tarifa despacho:</span>
+                  <span className="font-mono font-bold text-emerald-400">$1.00 / 1.000 L</span>
+                </div>
+                <Badge variant="outline" className="w-full justify-center text-[9px] py-0.5 border-blue-500/40 text-blue-300 bg-blue-950/40">
+                  🟢 Llenado activo en bahía
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
@@ -596,6 +747,10 @@ export function FactoryFloorSimulation({
         @keyframes waterWave {
           0%   { transform: translateY(0px) scaleY(1); }
           100% { transform: translateY(-2px) scaleY(1.1); }
+        }
+        @keyframes fluidFlow {
+          0%   { background-position: 0 0; }
+          100% { background-position: 0 16px; }
         }
       `}</style>
     </div>
