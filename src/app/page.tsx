@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { WhatsAppButton } from '@/components/whatsapp-button';
 
 export default function LandingPage() {
   const [scrollY, setScrollY] = useState(0);
@@ -519,6 +520,9 @@ export default function LandingPage() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+
+      {/* Botón flotante de WhatsApp solo para la web comercial */}
+      <WhatsAppButton />
     </main>
   );
 }
