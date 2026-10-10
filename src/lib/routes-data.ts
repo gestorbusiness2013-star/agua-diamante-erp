@@ -5,6 +5,9 @@ export type Route = {
     warehouseId?: string; // ID del almacén o punto de partida
     warehouseName?: string; // Nombre del almacén de partida
     startAddress?: string; // Dirección o punto geográfico de salida para el mapa
+    sellerId?: string; // ID del vendedor asignado a la ruta
+    sellerName?: string; // Nombre del vendedor asignado
+    visitDays?: string[]; // Días de visita programados (ej. ['Lunes', 'Jueves'])
     customerIds: string[]; // Changed to string array
 };
 
