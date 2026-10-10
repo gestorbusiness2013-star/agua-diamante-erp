@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/auth-context';
 import { InventoryProvider } from '@/context/inventory-context';
 import { DOMGuardian } from '@/components/dom-guardian';
+import { WhatsAppButton } from '@/components/whatsapp-button';
 
 export const metadata: Metadata = {
   title: 'Agua Diamante ERP',
@@ -34,6 +35,7 @@ export default function RootLayout({
           <InventoryProvider>
             {children}
             <Toaster />
+            <WhatsAppButton />
           </InventoryProvider>
         </AuthProvider>
       </body>
