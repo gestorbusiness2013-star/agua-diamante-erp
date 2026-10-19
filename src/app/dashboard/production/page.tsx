@@ -23,6 +23,7 @@ import type { StockRequest } from '@/lib/inventory-data';
 import { useAuth } from '@/context/auth-context';
 import { TransferForm, type TransferFormValues } from '@/components/transfer-form';
 import { generateDeliveryNotePDF } from '@/lib/delivery-note';
+import { ProductionRealtimeCockpit } from '@/components/production-realtime-cockpit';
 
 export default function ProductionPage() {
     const { 
@@ -39,7 +40,7 @@ export default function ProductionPage() {
     
     const { currentUser } = useAuth();
     const { toast } = useToast();
-    const [activeTab, setActiveTab] = useState<'lines' | 'requests' | 'simulator'>('lines');
+    const [activeTab, setActiveTab] = useState<'realtime' | 'lines' | 'requests' | 'simulator'>('realtime');
     
     // State for approving a stock request and creating a production order
     const [selectedRequest, setSelectedRequest] = useState<StockRequest | null>(null);
@@ -223,9 +224,19 @@ export default function ProductionPage() {
     };
 
     return (
-        <>
+        <div className="-m-4 lg:-m-6 p-4 lg:p-6 bg-[#070e1b] min-h-[calc(100vh-60px)] text-slate-100">
             <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)} className="space-y-4">
-                <TabsList>
+                <TabsList className="bg-slate-900/90 border border-slate-800 p-1 text-slate-300">
+                    <TabsTrigger 
+                        value="realtime" 
+                        className="gap-2 data-[state=active]:bg-cyan-600 data-[state=active]:text-white font-semibold transition-all"
+                    >
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+                        </span>
+                        Monitoreo en Tiempo Real
+                    </TabsTrigger>
                     <TabsTrigger value="lines">Líneas y Órdenes</TabsTrigger>
                     <TabsTrigger value="requests">
                         Solicitudes de Stock
@@ -237,6 +248,17 @@ export default function ProductionPage() {
                     </TabsTrigger>
                     <TabsTrigger value="simulator">Simulador IA</TabsTrigger>
                 </TabsList>
+                
+                <TabsContent value="realtime" className="space-y-4 focus-visible:outline-none">
+                    <ProductionRealtimeCockpit 
+                        lines={productionLines}
+                        onUpdateLines={updateProductionLines}
+                        onSwitchToManagement={() => setActiveTab('lines')}
+                        onSwitchToRequests={() => setActiveTab('requests')}
+                        pendingRequestsCount={stockRequests.filter(r => r.status === 'Pendiente').length}
+                    />
+                </TabsContent>
+
                 <TabsContent value="lines" className="space-y-8">
                      <ProductionLines lines={productionLines} setLines={updateProductionLines} finishedProducts={finishedProductNames} />
                      <ProductionOrders lines={productionLines} setLines={updateProductionLines} />
@@ -589,6 +611,6 @@ export default function ProductionPage() {
                     )}
                 </DialogContent>
             </Dialog>
-        </>
+        </div>
     );
 }
