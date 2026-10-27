@@ -138,6 +138,6 @@ export const initialUsers: Omit<User, 'id'>[] = [
     { name: "Luisa Fernandez", email: "luisa.fernandez@example.com", role: "Operador" },
     { name: "Jorge Martinez", email: "jorge.martinez@example.com", role: "Supervisor" },
     { name: "Usuario Principal", email: "GESTORBUSINESS2013@gmail.com", role: "Admin" },
-    { name: "Robert Davi", email: "robertdavi@hotmail.com", role: "Admin" },
+    { name: "Robert Davi", email: "robertdavi@hotmail.com", role: "Admin", commissionRate: 5 },
     { name: "Sofia Vivas", email: "vendedor@example.com", role: "Vendedor", commissionRate: 5, creditLevel: 1, maxCreditBoxes: 20, currentCreditDebtBoxes: 0, onTimePaymentsCount: 0, isLocked: false },
 ];

@@ -198,7 +198,30 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             finishedProducts: { setter: setFinishedProducts, process: (doc: any) => ({...doc.data(), id: doc.id} as FinishedProduct) },
             warehouses: { setter: setWarehouses, process: (doc: any) => ({...doc.data(), id: doc.id} as Warehouse) },
             movements: { setter: setMovements, process: (doc: any) => convertTimestampsToDates({...doc.data(), id: doc.id}) as Movement },
-            sales: { setter: setSales, process: (doc: any) => convertTimestampsToDates({...doc.data(), id: doc.id}) as Sale },
+            sales: { 
+                setter: setSales, 
+                process: (doc: any) => {
+                    const raw = doc.data();
+                    const s = convertTimestampsToDates({...raw, id: doc.id}) as Sale;
+                    if (s && s.saleType !== 'Cortesía' && (s.commissionAmount === undefined || s.commissionAmount === null || s.commissionAmount === 0)) {
+                        const userName = (s.user || '').trim().toLowerCase();
+                        let rate = Number(s.commissionRate);
+                        if (isNaN(rate) || rate <= 0) {
+                            if (userName.includes('robert') || userName.includes('vivas') || userName.includes('sofia')) {
+                                rate = 5;
+                            }
+                        }
+                        if (rate > 0) {
+                            s.commissionRate = rate;
+                            s.commissionAmount = (Number(s.totalAmount) || 0) * (rate / 100);
+                            if (doc.ref) {
+                                updateDoc(doc.ref, { commissionRate: rate, commissionAmount: s.commissionAmount }).catch(() => {});
+                            }
+                        }
+                    }
+                    return s;
+                }
+            },
             expenses: { setter: setExpenses, process: (doc: any) => convertTimestampsToDates({...doc.data(), id: doc.id}) as Expense, sort: (a: Expense, b: Expense) => b.date.getTime() - a.date.getTime() },
             employees: { setter: setEmployees, process: (doc: any) => convertTimestampsToDates({...doc.data(), id: doc.id}) as Employee },
             paidPayrolls: { setter: setPaidPayrolls, process: (doc: any) => doc.id, sort: (a: string, b: string) => b.localeCompare(a) },
@@ -206,6 +229,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 const data = doc.data();
                 if (!data) return null;
                 const processed = convertTimestampsToDates({...data, id: doc.id});
+                const name = (processed.name || '').trim().toLowerCase();
+                const isRobert = name.includes('robert');
+                const commissionRate = (processed.commissionRate !== undefined && processed.commissionRate !== null && !isNaN(Number(processed.commissionRate)))
+                    ? Number(processed.commissionRate)
+                    : (isRobert || processed.role === 'Vendedor' ? 5 : undefined);
                 // Ensure required fields have safe defaults to prevent render crashes
                 return {
                     ...processed,
@@ -213,6 +241,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                     name: processed.name || 'Usuario',
                     email: processed.email || '',
                     role: processed.role || 'Operador',
+                    commissionRate,
                 } as User;
             }, sort: undefined, filter: (item: any) => item !== null },
             productionLines: { setter: setProductionLines, process: (doc: any) => convertTimestampsToDates({...doc.data(), id: doc.id}) as ProductionLine },
@@ -575,9 +604,24 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                     throw new Error(`Límite de crédito insuficiente. Cupo disponible: ${credit.availableBoxes} cajas.`);
                 }
             }
+            const creatorUser = users.find(u => 
+                (u.id && u.id === currentUser.id) || 
+                ((u.email || '').toLowerCase() === (currentUser.email || '').toLowerCase()) ||
+                ((u.name || '').trim().toLowerCase() === (currentUser.name || '').trim().toLowerCase())
+            ) || currentUser;
+
+            let effectiveCommissionRate = Number(creatorUser.commissionRate);
+            if (isNaN(effectiveCommissionRate) || effectiveCommissionRate <= 0) {
+                if (creatorUser.role === 'Vendedor' || (currentUser.name || '').toLowerCase().includes('robert') || (creatorUser.name || '').toLowerCase().includes('robert')) {
+                    effectiveCommissionRate = 5;
+                } else {
+                    effectiveCommissionRate = 0;
+                }
+            }
+
             let commissionAmount: number | null = null;
-            if (currentUser.role === 'Vendedor' && currentUser.commissionRate && values.saleType !== 'Cortesía') {
-                commissionAmount = totalAmount * (currentUser.commissionRate / 100);
+            if (effectiveCommissionRate > 0 && values.saleType !== 'Cortesía') {
+                commissionAmount = totalAmount * (effectiveCommissionRate / 100);
             }
 
             const newSaleRef = doc(collection(db, 'sales'));
@@ -613,7 +657,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 user: currentUser.name,
                 status: 'Pendiente',
                 invoiceNumber,
-                commissionRate: currentUser.commissionRate || null,
+                commissionRate: effectiveCommissionRate > 0 ? effectiveCommissionRate : null,
                 commissionAmount: commissionAmount,
                 referenceNumber: values.referenceNumber || '',
                 receiptUrl: receiptUrl,
@@ -802,6 +846,23 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const updateSale = async (saleToUpdate: Sale) => {
         try {
             const { id, ...dataToUpdate } = saleToUpdate;
+            if (dataToUpdate.saleType !== 'Cortesía') {
+                const sellerName = (dataToUpdate.user || '').trim().toLowerCase();
+                const seller = users.find(u => 
+                    (u.name || '').trim().toLowerCase() === sellerName ||
+                    (u.email || '').trim().toLowerCase() === sellerName
+                );
+                let rate = Number(dataToUpdate.commissionRate) || Number(seller?.commissionRate);
+                if (isNaN(rate) || rate <= 0) {
+                    if (sellerName.includes('robert') || seller?.role === 'Vendedor') {
+                        rate = 5;
+                    }
+                }
+                if (rate > 0) {
+                    dataToUpdate.commissionRate = rate;
+                    dataToUpdate.commissionAmount = (Number(dataToUpdate.totalAmount) || 0) * (rate / 100);
+                }
+            }
             await updateDoc(doc(db, 'sales', id), dataToUpdate as any);
             toast({ title: "Venta Actualizada" });
         } catch (error) {

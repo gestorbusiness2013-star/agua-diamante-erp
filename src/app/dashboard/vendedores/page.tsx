@@ -77,7 +77,7 @@ export default function VendedoresPage() {
         setDate({ from: new Date(today.getFullYear(), today.getMonth(), 1), to: addDays(new Date(today.getFullYear(), today.getMonth() + 1, 0), 0) });
     }, []);
 
-    const sellers = useMemo(() => (users || []).filter(u => u && u.role === 'Vendedor'), [users]);
+    const sellers = useMemo(() => (users || []).filter(u => u && (u.role === 'Vendedor' || (u.commissionRate && u.commissionRate > 0) || (u.name || '').toLowerCase().includes('robert'))), [users]);
 
     const sellerStats = useMemo(() => {
         if (!isClient) return []; 
@@ -136,7 +136,12 @@ export default function VendedoresPage() {
                 credit,
                 openConsignmentSales,
                 totalSold,
-                totalCommission: sSales.reduce((sum, s) => sum + (Number(s?.commissionAmount) || 0), 0),
+                totalCommission: sSales.reduce((sum, s) => {
+                    const comm = Number(s?.commissionAmount) || 0;
+                    if (comm > 0) return sum + comm;
+                    const rate = Number(s?.commissionRate) || Number(seller.commissionRate) || 5;
+                    return sum + (s?.saleType !== 'Cortesía' ? (Number(s?.totalAmount) || 0) * (rate / 100) : 0);
+                }, 0),
                 saleCount: sSales.length,
                 ticketPromedio: sSales.length > 0 ? totalSold / sSales.length : 0,
                 recentSales: sSales.slice(0, 5),

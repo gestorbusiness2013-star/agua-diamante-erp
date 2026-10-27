@@ -339,10 +339,25 @@ export default function SalesPage() {
     const consignmentSales = receivableSales;
     const cancelledSales = useMemo(() => filteredSales.filter(s => s.status === 'Cancelado'), [filteredSales]);
     
+    const getSaleCommission = (sale: Sale): number => {
+        if (!sale || sale.saleType === 'Cortesía') return 0;
+        if (sale.commissionAmount !== null && sale.commissionAmount !== undefined && Number(sale.commissionAmount) > 0) {
+            return Number(sale.commissionAmount);
+        }
+        if (sale.commissionRate && Number(sale.commissionRate) > 0) {
+            return (Number(sale.totalAmount) || 0) * (Number(sale.commissionRate) / 100);
+        }
+        const userStr = (sale.user || '').trim().toLowerCase();
+        if (userStr.includes('robert') || userStr.includes('vivas') || userStr.includes('sofia')) {
+            return (Number(sale.totalAmount) || 0) * 0.05;
+        }
+        return 0;
+    };
+
     const calculateTotals = (salesData: Sale[]) => {
         return salesData.reduce((acc, sale) => {
             acc.totalAmount += (Number(sale.totalAmount) || 0);
-            acc.totalCommission += (Number(sale.commissionAmount) || 0);
+            acc.totalCommission += getSaleCommission(sale);
             return acc;
         }, { totalAmount: 0, totalCommission: 0 });
     };
@@ -711,8 +726,8 @@ export default function SalesPage() {
                                                 </>
                                             )}
                                         </TableCell>
-                                        <TableCell className="hidden lg:table-cell text-right font-mono text-emerald-500">
-                                            {sale.commissionAmount ? formatCurrency(sale.commissionAmount) : <span className="text-muted-foreground">-</span>}
+                                        <TableCell className="hidden lg:table-cell text-right font-mono text-emerald-500 font-semibold">
+                                            {getSaleCommission(sale) > 0 ? formatCurrency(getSaleCommission(sale)) : <span className="text-muted-foreground">-</span>}
                                         </TableCell>
                                         <TableCell className="hidden md:table-cell">
                                             <Badge className={getStatusBadge(sale).className}>
@@ -1434,6 +1449,11 @@ export default function SalesPage() {
                                                 {abono > 0 && (
                                                     <span className="text-[11px] text-muted-foreground block">
                                                         Total: {formatCurrency(total)} (Abono: {formatCurrency(abono)})
+                                                    </span>
+                                                )}
+                                                {getSaleCommission(sale) > 0 && (
+                                                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold block">
+                                                        Comisión: {formatCurrency(getSaleCommission(sale))}
                                                     </span>
                                                 )}
                                             </div>
