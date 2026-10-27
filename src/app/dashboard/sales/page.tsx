@@ -6,11 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, addDays, subDays, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MoreHorizontal, PlusCircle, PackageCheck, AlertTriangle, DollarSign, Calendar as CalendarIcon, TrendingUp, Search, ShoppingCart, Activity, ShieldAlert, KeyRound, Lock, Loader2, FileText } from "lucide-react";
+import { MoreHorizontal, PlusCircle, PackageCheck, AlertTriangle, DollarSign, Calendar as CalendarIcon, TrendingUp, Search, ShoppingCart, Activity, ShieldAlert, KeyRound, Lock, Loader2, FileText, Eye } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from "recharts";
 import {
   DropdownMenu,
@@ -77,6 +77,16 @@ export default function SalesPage() {
     const [saleToCollect, setSaleToCollect] = useState<Sale | null>(null);
     const [date, setDate] = useState<DateRange | undefined>();
     const [searchQuery, setSearchQuery] = useState("");
+    const [activeTab, setActiveTab] = useState<'pending' | 'receivable' | 'dispatched' | 'cancelled'>('pending');
+    const [quickReceivablesDialogOpen, setQuickReceivablesDialogOpen] = useState(false);
+    const tableSectionRef = useRef<HTMLDivElement>(null);
+
+    const handleCardClick = (tab: 'pending' | 'receivable' | 'dispatched' | 'cancelled') => {
+        setActiveTab(tab);
+        setTimeout(() => {
+            tableSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+    };
     const [dispatchedDate, setDispatchedDate] = useState<DateRange | undefined>(() => {
         const today = new Date();
         return {
@@ -246,7 +256,24 @@ export default function SalesPage() {
         return list;
     }, [sales, currentUser]);
 
-    const pendingSales = useMemo(() => filteredSales.filter(s => s.status === 'Pendiente'), [filteredSales]);
+    const pendingSales = useMemo(() => {
+        let list = userVisibleSales.filter(s => s.status === 'Pendiente');
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            list = list.filter(s => {
+                const matchCustomer = (s.customerName?.toLowerCase() || "").includes(query);
+                const matchInvoice = (s.invoiceNumber?.toLowerCase() || "").includes(query);
+                const items = getSaleItems(s);
+                const matchProduct = items.some(i => i.productName.toLowerCase().includes(query));
+                return matchCustomer || matchInvoice || matchProduct;
+            });
+        }
+        return list.sort((a, b) => {
+            const timeA = a.date ? new Date(a.date).getTime() : 0;
+            const timeB = b.date ? new Date(b.date).getTime() : 0;
+            return timeB - timeA;
+        });
+    }, [userVisibleSales, searchQuery]);
     
     const dispatchedSales = useMemo(() => {
         let list = userVisibleSales.filter(s => s.status === 'Despachado' || s.status === 'Pagado' || s.status === 'Por Cobrar');
@@ -280,7 +307,36 @@ export default function SalesPage() {
         });
     }, [userVisibleSales, searchQuery, dispatchedDate]);
 
-    const consignmentSales = useMemo(() => filteredSales.filter(s => s.status === 'Por Cobrar'), [filteredSales]);
+    const receivableSales = useMemo(() => {
+        let list = userVisibleSales.filter(s => s.status === 'Por Cobrar');
+
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            list = list.filter(s => {
+                const matchCustomer = (s.customerName?.toLowerCase() || "").includes(query);
+                const matchInvoice = (s.invoiceNumber?.toLowerCase() || "").includes(query);
+                const items = getSaleItems(s);
+                const matchProduct = items.some(i => i.productName.toLowerCase().includes(query));
+                return matchCustomer || matchInvoice || matchProduct;
+            });
+        }
+
+        return list.sort((a, b) => {
+            const timeA = a.date ? new Date(a.date).getTime() : 0;
+            const timeB = b.date ? new Date(b.date).getTime() : 0;
+            return timeB - timeA;
+        });
+    }, [userVisibleSales, searchQuery]);
+
+    const totalReceivablePendingAmount = useMemo(() => {
+        return receivableSales.reduce((acc, sale) => {
+            const total = Number(sale.totalAmount) || 0;
+            const abono = Number(sale.partialPaymentAmount) || 0;
+            return acc + Math.max(0, total - abono);
+        }, 0);
+    }, [receivableSales]);
+
+    const consignmentSales = receivableSales;
     const cancelledSales = useMemo(() => filteredSales.filter(s => s.status === 'Cancelado'), [filteredSales]);
     
     const calculateTotals = (salesData: Sale[]) => {
@@ -527,7 +583,7 @@ export default function SalesPage() {
             return { className: cn(baseClasses, "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100"), label: "Pendiente" };
         }
         if (status === 'Por Cobrar') {
-            return { className: cn(baseClasses, "bg-red-100 text-red-800 border-red-200 hover:bg-red-100"), label: "Por Pagar" };
+            return { className: cn(baseClasses, "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800"), label: "Por Cobrar" };
         }
         if (status === 'Despachado') {
             const label = saleType === 'Consignación' ? "Consignación" : (sale.partialPaymentAmount ? "Pago Parcial" : "Despachado");
@@ -575,8 +631,15 @@ export default function SalesPage() {
                                                 {isClient ? format(new Date(sale.date), "dd/MM/yyyy", { locale: es }) : ''}
                                             </div>
                                             {sale.dueDate && (
-                                                <div className="text-xs text-red-500 font-medium mt-1">
-                                                    Vence: {isClient ? format(new Date(sale.dueDate), "dd/MM/yyyy") : ''}
+                                                <div className="text-xs font-medium mt-1 flex items-center gap-1 flex-wrap">
+                                                    <span className={cn(sale.status === 'Por Cobrar' && new Date(sale.dueDate) < new Date() ? "text-red-600 font-bold" : "text-amber-600")}>
+                                                        Vence: {isClient ? format(new Date(sale.dueDate), "dd/MM/yyyy") : ''}
+                                                    </span>
+                                                    {sale.status === 'Por Cobrar' && new Date(sale.dueDate) < new Date() && (
+                                                        <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 uppercase font-semibold">
+                                                            Vencida
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                             )}
                                             {(!sale.dueDate && sale.paymentMethod) && (
@@ -634,13 +697,17 @@ export default function SalesPage() {
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <div>{formatCurrency(sale.totalAmount)}</div>
+                                                    <div className={cn(sale.status === 'Por Cobrar' && "font-semibold")}>
+                                                        {formatCurrency(sale.totalAmount)}
+                                                    </div>
                                                     {sale.partialPaymentAmount ? (
-                                                        <div className="text-xs text-muted-foreground mt-1">Abono: {formatCurrency(sale.partialPaymentAmount)}</div>
+                                                        <div className="text-xs text-muted-foreground mt-0.5">Abono: {formatCurrency(sale.partialPaymentAmount)}</div>
                                                     ) : null}
-                                                    {sale.partialPaymentAmount ? (
-                                                        <div className="text-xs text-red-500 font-medium">Resta: {formatCurrency(sale.totalAmount - sale.partialPaymentAmount)}</div>
-                                                    ) : null}
+                                                    {sale.status === 'Por Cobrar' && (
+                                                        <div className="text-xs text-red-600 dark:text-red-400 font-bold mt-0.5">
+                                                            Resta: {formatCurrency(sale.totalAmount - (sale.partialPaymentAmount || 0))}
+                                                        </div>
+                                                    )}
                                                 </>
                                             )}
                                         </TableCell>
@@ -654,18 +721,42 @@ export default function SalesPage() {
                                         </TableCell>
                                         <TableCell>{sale.user}</TableCell>
                                         <TableCell>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                    {sale.receiptUrl && <DropdownMenuItem onClick={() => window.open(sale.receiptUrl, '_blank')}><FileText className="mr-2 h-4 w-4"/>Ver Comprobante Abono</DropdownMenuItem>}
-                                                    {sale.finalReceiptUrl && <DropdownMenuItem onClick={() => window.open(sale.finalReceiptUrl, '_blank')}><FileText className="mr-2 h-4 w-4"/>Ver Comprobante Final</DropdownMenuItem>}
-                                                    {sale.status === 'Pendiente' && canDispatch && <DropdownMenuItem onClick={() => setAlertDialog({ open: true, type: 'dispatch', sale })}><PackageCheck className="mr-2 h-4 w-4"/>Despachar</DropdownMenuItem>}
-                                                    {sale.status === 'Por Cobrar' && <DropdownMenuItem onClick={() => { setSaleToCollect(sale); setCollectPaymentDialogOpen(true); }}><DollarSign className="mr-2 h-4 w-4"/>Registrar Pago Final</DropdownMenuItem>}
-                                                    {sale.status === 'Pendiente' && <DropdownMenuItem onClick={() => handleOpenEditDialog(sale)}>Editar</DropdownMenuItem>}
-                                                    {sale.status !== 'Cancelado' && <DropdownMenuItem onClick={() => handleRequestCancel(sale)} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><AlertTriangle className="mr-2 h-4 w-4"/>Anular Orden</DropdownMenuItem>}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                {sale.status === 'Por Cobrar' && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        className="h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs" 
+                                                        onClick={() => { setSaleToCollect(sale); setCollectPaymentDialogOpen(true); }}
+                                                    >
+                                                        <DollarSign className="mr-1 h-3.5 w-3.5" />
+                                                        Cobrar
+                                                    </Button>
+                                                )}
+                                                {sale.status === 'Pendiente' && canDispatch && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        className="h-8 px-2.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-xs" 
+                                                        onClick={() => setAlertDialog({ open: true, type: 'dispatch', sale })}
+                                                    >
+                                                        <PackageCheck className="mr-1 h-3.5 w-3.5" />
+                                                        Despachar
+                                                    </Button>
+                                                )}
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                        {sale.receiptUrl && <DropdownMenuItem onClick={() => window.open(sale.receiptUrl, '_blank')}><FileText className="mr-2 h-4 w-4"/>Ver Comprobante Abono</DropdownMenuItem>}
+                                                        {sale.finalReceiptUrl && <DropdownMenuItem onClick={() => window.open(sale.finalReceiptUrl, '_blank')}><FileText className="mr-2 h-4 w-4"/>Ver Comprobante Final</DropdownMenuItem>}
+                                                        {sale.status === 'Pendiente' && canDispatch && <DropdownMenuItem onClick={() => setAlertDialog({ open: true, type: 'dispatch', sale })}><PackageCheck className="mr-2 h-4 w-4"/>Despachar</DropdownMenuItem>}
+                                                        {sale.status === 'Por Cobrar' && <DropdownMenuItem onClick={() => { setSaleToCollect(sale); setCollectPaymentDialogOpen(true); }}><DollarSign className="mr-2 h-4 w-4"/>Registrar Pago Final</DropdownMenuItem>}
+                                                        {sale.status === 'Pendiente' && <DropdownMenuItem onClick={() => handleOpenEditDialog(sale)}>Editar</DropdownMenuItem>}
+                                                        {sale.status !== 'Cancelado' && <DropdownMenuItem onClick={() => handleRequestCancel(sale)} className="text-destructive focus:bg-destructive/10 focus:text-destructive"><AlertTriangle className="mr-2 h-4 w-4"/>Anular Orden</DropdownMenuItem>}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -766,44 +857,126 @@ export default function SalesPage() {
             )}
 
             <div className="grid gap-4 md:grid-cols-4">
-                <Card>
+                <Card 
+                    onClick={() => handleCardClick('dispatched')}
+                    className={cn(
+                        "cursor-pointer transition-all duration-200 hover:shadow-md hover:border-blue-400 select-none group relative overflow-hidden",
+                        activeTab === 'dispatched' ? "ring-2 ring-blue-500 border-blue-500 bg-blue-50/20 dark:bg-blue-950/20" : "hover:bg-muted/30"
+                    )}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Ventas Totales</CardTitle>
-                        <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            Ventas Totales
+                        </CardTitle>
+                        <div className="p-1.5 rounded-full bg-blue-100/70 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                            <ShoppingCart className="h-4 w-4" />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{formatCurrency(totalFilteredSalesAmount)}</div>
-                        <p className="text-xs text-muted-foreground">{filteredSales.length} órdenes en total</p>
+                        <p className="text-xs text-muted-foreground flex items-center justify-between mt-1">
+                            <span>{filteredSales.length} órdenes en total</span>
+                            <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium group-hover:underline">
+                                Ver historial ↓
+                            </span>
+                        </p>
                     </CardContent>
                 </Card>
+
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Comisiones Generadas</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-emerald-500" />
+                        <div className="p-1.5 rounded-full bg-emerald-100/70 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+                            <TrendingUp className="h-4 w-4" />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-emerald-600">{formatCurrency(totalFilteredCommissions)}</div>
-                        <p className="text-xs text-muted-foreground">Rendimiento del equipo</p>
+                        <p className="text-xs text-muted-foreground mt-1">Rendimiento del equipo</p>
                     </CardContent>
                 </Card>
-                <Card>
+
+                <Card 
+                    onClick={() => handleCardClick('pending')}
+                    className={cn(
+                        "cursor-pointer transition-all duration-200 hover:shadow-md hover:border-yellow-400 select-none group relative overflow-hidden",
+                        activeTab === 'pending' ? "ring-2 ring-yellow-500 border-yellow-500 bg-yellow-50/20 dark:bg-yellow-950/20" : "hover:bg-muted/30"
+                    )}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Órdenes Pendientes</CardTitle>
-                        <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                        <div className="flex items-center gap-1.5">
+                            <CardTitle className="text-sm font-medium group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">
+                                Órdenes Pendientes
+                            </CardTitle>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300 font-medium">
+                                Despacho
+                            </span>
+                        </div>
+                        <div className="p-1.5 rounded-full bg-yellow-100/70 text-yellow-600 dark:bg-yellow-950/50 dark:text-yellow-400 group-hover:scale-110 transition-transform">
+                            <AlertTriangle className="h-4 w-4" />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-yellow-600">{pendingSales.length}</div>
-                        <p className="text-xs text-muted-foreground">Requieren despacho</p>
+                        <p className="text-xs text-muted-foreground flex items-center justify-between mt-1">
+                            <span>Requieren despacho</span>
+                            <span className="text-[11px] text-yellow-600 dark:text-yellow-400 font-medium group-hover:underline">
+                                Ver pendientes ↓
+                            </span>
+                        </p>
                     </CardContent>
                 </Card>
-                <Card>
+
+                <Card 
+                    onClick={() => handleCardClick('receivable')}
+                    className={cn(
+                        "cursor-pointer transition-all duration-200 hover:shadow-md hover:border-orange-400 select-none group relative overflow-hidden",
+                        activeTab === 'receivable' ? "ring-2 ring-orange-500 border-orange-500 bg-orange-50/20 dark:bg-orange-950/20" : "hover:bg-muted/30"
+                    )}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Por Cobrar</CardTitle>
-                        <DollarSign className="h-4 w-4 text-orange-500" />
+                        <div className="flex items-center gap-1.5">
+                            <CardTitle className="text-sm font-medium group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                                Por Cobrar
+                            </CardTitle>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 font-medium">
+                                Pago Pendiente
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-orange-600 hover:bg-orange-100/50"
+                                title="Vista Rápida de Pendientes por Pago"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setQuickReceivablesDialogOpen(true);
+                                }}
+                            >
+                                <Eye className="h-4 w-4" />
+                            </Button>
+                            <div className="p-1.5 rounded-full bg-orange-100/70 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400 group-hover:scale-110 transition-transform">
+                                <DollarSign className="h-4 w-4" />
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-orange-600">{consignmentSales.length}</div>
-                        <p className="text-xs text-muted-foreground">Consignaciones activas</p>
+                        <div className="flex items-baseline justify-between">
+                            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{receivableSales.length}</div>
+                            {totalReceivablePendingAmount > 0 && (
+                                <div className="text-xs font-semibold text-muted-foreground font-mono">
+                                    Saldo: {formatCurrency(totalReceivablePendingAmount)}
+                                </div>
+                            )}
+                        </div>
+                        <p className="text-xs text-muted-foreground flex items-center justify-between mt-1">
+                            <span>Consignaciones activas</span>
+                            <span className="text-[11px] text-orange-600 dark:text-orange-400 font-medium group-hover:underline flex items-center gap-0.5">
+                                Clic para ver órdenes ↓
+                            </span>
+                        </p>
                     </CardContent>
                 </Card>
             </div>
@@ -844,7 +1017,7 @@ export default function SalesPage() {
                 </Card>
             )}
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div ref={tableSectionRef} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="relative w-full md:w-96">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
@@ -856,13 +1029,60 @@ export default function SalesPage() {
                 </div>
             </div>
 
-            <Tabs defaultValue="pending">
-                <TabsList className="grid w-full grid-cols-3 mb-4">
-                    <TabsTrigger value="pending">Pendientes</TabsTrigger>
-                    <TabsTrigger value="dispatched">Despachados</TabsTrigger>
-                    <TabsTrigger value="cancelled">Canceladas</TabsTrigger>
+            <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
+                <TabsList className="grid w-full grid-cols-4 mb-4">
+                    <TabsTrigger value="pending" className="flex items-center gap-1.5">
+                        <span>Pendientes Despacho</span>
+                        <Badge variant="secondary" className="px-1.5 py-0 text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300">
+                            {pendingSales.length}
+                        </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger value="receivable" className="flex items-center gap-1.5 data-[state=active]:text-orange-600">
+                        <span>Por Cobrar</span>
+                        <Badge variant="secondary" className="px-1.5 py-0 text-xs font-bold bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300">
+                            {receivableSales.length}
+                        </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger value="dispatched" className="flex items-center gap-1.5">
+                        <span>Despachadas</span>
+                        <Badge variant="secondary" className="px-1.5 py-0 text-xs font-semibold">
+                            {dispatchedSales.length}
+                        </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger value="cancelled" className="flex items-center gap-1.5">
+                        <span>Canceladas</span>
+                        <Badge variant="secondary" className="px-1.5 py-0 text-xs font-semibold">
+                            {cancelledSales.length}
+                        </Badge>
+                    </TabsTrigger>
                 </TabsList>
-                <TabsContent value="pending" className="mt-4">{renderSalesTable(pendingSales, 'Pendientes')}</TabsContent>
+                <TabsContent value="pending" className="mt-4">{renderSalesTable(pendingSales, 'Pendientes de Despacho')}</TabsContent>
+                <TabsContent value="receivable" className="mt-4 space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-3.5 rounded-xl border border-orange-200 bg-orange-50/50 dark:border-orange-900/50 dark:bg-orange-950/20 shadow-xs">
+                        <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-lg bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400">
+                                <DollarSign className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-semibold text-orange-950 dark:text-orange-200">
+                                    Órdenes Pendientes por Pago (Por Cobrar)
+                                </h4>
+                                <p className="text-xs text-muted-foreground">
+                                    {receivableSales.length} {receivableSales.length === 1 ? 'orden pendiente' : 'órdenes pendientes'} de cobro • Ventas en consignación o crédito con saldo pendiente
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="text-right">
+                                <span className="text-xs text-muted-foreground block">Total Saldo Pendiente</span>
+                                <span className="text-lg font-bold text-orange-600 dark:text-orange-400 font-mono">
+                                    {formatCurrency(totalReceivablePendingAmount)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {renderSalesTable(receivableSales, 'Pendientes de Pago')}
+                </TabsContent>
                 <TabsContent value="dispatched" className="mt-4 space-y-4">
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 p-3.5 rounded-xl border bg-muted/40 shadow-xs">
                         <div className="flex items-center gap-2.5">
@@ -1149,6 +1369,129 @@ export default function SalesPage() {
                                     Autorizar y Anular
                                 </>
                             )}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            {/* Modal de Vista Rápida de Órdenes Pendientes por Pago (Por Cobrar) */}
+            <Dialog open={quickReceivablesDialogOpen} onOpenChange={setQuickReceivablesDialogOpen}>
+                <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col">
+                    <DialogHeader>
+                        <div className="flex items-center gap-2.5">
+                            <div className="p-2.5 rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400">
+                                <DollarSign className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-lg">Órdenes Pendientes por Pago</DialogTitle>
+                                <DialogDescription className="text-xs">
+                                    {receivableSales.length} {receivableSales.length === 1 ? 'orden por cobrar' : 'órdenes por cobrar'} • Saldo total pendiente: <strong className="text-foreground font-mono">{formatCurrency(totalReceivablePendingAmount)}</strong>
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-y-auto py-2 pr-1 space-y-3">
+                        {receivableSales.length === 0 ? (
+                            <div className="p-8 text-center text-muted-foreground">
+                                <PackageCheck className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
+                                <p className="font-medium">No hay órdenes pendientes por cobrar</p>
+                                <p className="text-xs">Todas las consignaciones y créditos están al día.</p>
+                            </div>
+                        ) : (
+                            receivableSales.map((sale) => {
+                                const total = Number(sale.totalAmount) || 0;
+                                const abono = Number(sale.partialPaymentAmount) || 0;
+                                const resta = Math.max(0, total - abono);
+                                const isOverdue = sale.dueDate && new Date(sale.dueDate) < new Date();
+                                const items = getSaleItems(sale);
+
+                                return (
+                                    <div key={sale.id} className="p-3.5 rounded-xl border bg-card hover:border-orange-300 dark:hover:border-orange-800 transition-colors shadow-2xs space-y-2">
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-sm font-mono">{sale.invoiceNumber}</span>
+                                                    <Badge variant="outline" className="text-[10px] border-orange-300 bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300">
+                                                        Por Cobrar
+                                                    </Badge>
+                                                    {isOverdue && (
+                                                        <Badge variant="destructive" className="text-[10px]">
+                                                            Vencida
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <p className="font-medium text-sm text-foreground mt-0.5">{sale.customerName}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Vendedor: {sale.user} • Fecha: {isClient ? format(new Date(sale.date), "dd/MM/yyyy", { locale: es }) : ''}
+                                                    {sale.dueDate && ` • Vence: ${isClient ? format(new Date(sale.dueDate), "dd/MM/yyyy") : ''}`}
+                                                </p>
+                                            </div>
+                                            <div className="text-left sm:text-right">
+                                                <span className="text-[11px] text-muted-foreground block">Resta por Cobrar:</span>
+                                                <span className="text-lg font-bold text-red-600 dark:text-red-400 font-mono">
+                                                    {formatCurrency(resta)}
+                                                </span>
+                                                {abono > 0 && (
+                                                    <span className="text-[11px] text-muted-foreground block">
+                                                        Total: {formatCurrency(total)} (Abono: {formatCurrency(abono)})
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-2 border-t text-xs gap-2">
+                                            <span className="text-muted-foreground truncate max-w-sm">
+                                                {items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}
+                                            </span>
+                                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                                                {sale.receiptUrl && (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="h-7 text-xs px-2"
+                                                        onClick={() => window.open(sale.receiptUrl, '_blank')}
+                                                    >
+                                                        <FileText className="h-3.5 w-3.5 mr-1" />
+                                                        Comprobante
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    size="sm"
+                                                    className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                                                    onClick={() => {
+                                                        setQuickReceivablesDialogOpen(false);
+                                                        setSaleToCollect(sale);
+                                                        setCollectPaymentDialogOpen(true);
+                                                    }}
+                                                >
+                                                    <DollarSign className="h-3.5 w-3.5 mr-1" />
+                                                    Registrar Pago
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                                setQuickReceivablesDialogOpen(false);
+                                handleCardClick('receivable');
+                            }}
+                        >
+                            Ver en la tabla principal →
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setQuickReceivablesDialogOpen(false)}
+                        >
+                            Cerrar
                         </Button>
                     </div>
                 </DialogContent>
