@@ -340,7 +340,7 @@ export default function SalesPage() {
     const cancelledSales = useMemo(() => filteredSales.filter(s => s.status === 'Cancelado'), [filteredSales]);
     
     const getSaleCommission = (sale: Sale): number => {
-        if (!sale || sale.saleType === 'Cortesía') return 0;
+        if (!sale || sale.saleType === 'Cortesía' || sale.status === 'Cancelado') return 0;
         const userStr = (sale.user || '').trim().toLowerCase();
         const isRobertOrSeller = userStr.includes('robert') || userStr.includes('vivas') || userStr.includes('sofia');
         

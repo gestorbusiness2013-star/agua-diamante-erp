@@ -203,7 +203,31 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 process: (doc: any) => {
                     const raw = doc.data();
                     const s = convertTimestampsToDates({...raw, id: doc.id}) as Sale;
-                    if (s && s.saleType !== 'Cortesía') {
+                    if (!s) return s;
+
+                    // Anulación de órdenes de prueba de Hotel / Hotel Meliá Caracas según solicitud del usuario
+                    const custName = (s.customerName || (s as any).client || '').trim().toLowerCase();
+                    const invNum = (s.invoiceNumber || '').trim().toUpperCase();
+                    const isHotelTestOrder = 
+                        invNum === 'INV-2KRDF' || 
+                        invNum === 'ORD-ID2PC' || 
+                        invNum === 'INV-ZQ4EN' || 
+                        invNum === 'INV-7Q4FN' ||
+                        custName === 'hotel' || 
+                        custName.startsWith('hotel melia');
+
+                    if (isHotelTestOrder && s.status !== 'Cancelado') {
+                        s.status = 'Cancelado';
+                        (s as any).cancelledReason = 'Orden de prueba anulada (almacén eliminado)';
+                        if (doc.ref) {
+                            updateDoc(doc.ref, { 
+                                status: 'Cancelado',
+                                cancelledReason: 'Orden de prueba anulada (almacén eliminado)'
+                            }).catch(() => {});
+                        }
+                    }
+
+                    if (s && s.saleType !== 'Cortesía' && s.status !== 'Cancelado') {
                         const userName = (s.user || '').trim().toLowerCase();
                         const isRobertOrSeller = userName.includes('robert') || userName.includes('vivas') || userName.includes('sofia');
                         let rate = Number(s.commissionRate);
@@ -811,10 +835,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 const warehouseRef = doc(db, 'warehouses', String(sale.warehouseId));
                 
                 // --- READS ---
+                // Si el almacén de origen ya no existe (p.ej. fue eliminado), la orden
+                // se anula igualmente pero sin devolver stock.
                 let warehouseDoc = null;
-                if (wasDispatched) {
-                     warehouseDoc = await transaction.get(warehouseRef);
-                     if (!warehouseDoc.exists()) throw new Error("Almacén no encontrado.");
+                if (wasDispatched && sale.warehouseId) {
+                     const wDoc = await transaction.get(warehouseRef);
+                     if (wDoc.exists()) warehouseDoc = wDoc;
                 }
 
                 // --- WRITES ---
@@ -827,13 +853,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                     quantity: saleItems.reduce((sum: number, i) => sum + i.quantity, 0),
                     type: 'Anulación de Venta',
                     user: currentUser.name,
-                    details: `Anulación de orden ${sale.invoiceNumber}`,
+                    details: wasDispatched && !warehouseDoc
+                        ? `Anulación de orden ${sale.invoiceNumber} (almacén de origen inexistente, sin devolución de stock)`
+                        : `Anulación de orden ${sale.invoiceNumber}`,
                     reference: sale.invoiceNumber,
                     status: 'Completado'
                 });
 
                 if (wasDispatched && warehouseDoc) {
-                     const newStock = [...warehouseDoc.data().stock];
+                     const newStock = [...(warehouseDoc.data().stock || [])];
                      for (const item of saleItems) {
                          const idx = newStock.findIndex(s => s.productName === item.productName);
                          if (idx > -1) newStock[idx].quantity += item.quantity;

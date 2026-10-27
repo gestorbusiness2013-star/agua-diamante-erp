@@ -32,7 +32,8 @@ import {
     Clock,
     Award,
     UserPlus,
-    Edit
+    Edit,
+    Trash2
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Calendar } from '@/components/ui/calendar';
@@ -60,7 +61,7 @@ const SellerMap = dynamic(() => import('@/components/seller-map'), {
 });
 
 export default function VendedoresPage() {
-    const { sales, users, updateUserLocation, updateSellerCredit, createUser, updateUser } = useInventory();
+    const { sales, users, updateUserLocation, updateSellerCredit, createUser, updateUser, cancelSaleOrder } = useInventory();
     const { currentUser } = useAuth();
     const { toast } = useToast();
 
@@ -100,7 +101,7 @@ export default function VendedoresPage() {
         }
 
         return sellers.map(seller => {
-            const sSales = seller.name ? filteredSales.filter(s => s && (s.user || '').trim().toLowerCase() === (seller.name || '').trim().toLowerCase()) : [];
+            const sSales = seller.name ? filteredSales.filter(s => s && (s.user || '').trim().toLowerCase() === (seller.name || '').trim().toLowerCase() && s.status !== 'Cancelado') : [];
             
             let timestampMs: number | null = null;
             if (seller.lastLocationTimestamp) {
@@ -137,7 +138,7 @@ export default function VendedoresPage() {
                 openConsignmentSales,
                 totalSold,
                 totalCommission: sSales.reduce((sum, s) => {
-                    if (s?.saleType === 'Cortesía') return sum;
+                    if (s?.saleType === 'Cortesía' || s?.status === 'Cancelado') return sum;
                     const isRobertOrSeller = ((seller.name || '').toLowerCase().includes('robert') || seller.role === 'Vendedor');
                     let rate = Number(s?.commissionRate) || Number(seller.commissionRate) || (isRobertOrSeller ? 10 : 0);
                     if (rate === 5 && isRobertOrSeller) {
@@ -776,11 +777,26 @@ export default function VendedoresPage() {
                                                             {sale.invoiceNumber} • <strong>{boxes} cajas</strong> • Vence: {due ? format(due, "dd/MM/yyyy") : 'N/A'}
                                                         </p>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="font-bold text-sm">{formatCurrency(sale.totalAmount)}</p>
-                                                        <Badge variant={isOverdue ? "destructive" : "outline"} className="text-[10px] h-5">
-                                                            {sale.status}
-                                                        </Badge>
+                                                    <div className="text-right flex items-center gap-2">
+                                                        <div>
+                                                            <p className="font-bold text-sm">{formatCurrency(sale.totalAmount)}</p>
+                                                            <Badge variant={isOverdue ? "destructive" : "outline"} className="text-[10px] h-5">
+                                                                {sale.status}
+                                                            </Badge>
+                                                        </div>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                                                            title="Anular Orden"
+                                                            onClick={async () => {
+                                                                if (confirm(`¿Deseas anular la orden ${sale.invoiceNumber} de ${sale.customerName}?`)) {
+                                                                    await cancelSaleOrder(sale, currentUser || { name: 'Admin' });
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             );
