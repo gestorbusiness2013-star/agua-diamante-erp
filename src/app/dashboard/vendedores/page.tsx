@@ -137,10 +137,15 @@ export default function VendedoresPage() {
                 openConsignmentSales,
                 totalSold,
                 totalCommission: sSales.reduce((sum, s) => {
+                    if (s?.saleType === 'Cortesía') return sum;
+                    const isRobertOrSeller = ((seller.name || '').toLowerCase().includes('robert') || seller.role === 'Vendedor');
+                    let rate = Number(s?.commissionRate) || Number(seller.commissionRate) || (isRobertOrSeller ? 10 : 0);
+                    if (rate === 5 && isRobertOrSeller) {
+                        rate = 10;
+                    }
                     const comm = Number(s?.commissionAmount) || 0;
-                    if (comm > 0) return sum + comm;
-                    const rate = Number(s?.commissionRate) || Number(seller.commissionRate) || 5;
-                    return sum + (s?.saleType !== 'Cortesía' ? (Number(s?.totalAmount) || 0) * (rate / 100) : 0);
+                    if (comm > 0 && rate !== 10) return sum + comm;
+                    return sum + ((Number(s?.totalAmount) || 0) * (rate / 100));
                 }, 0),
                 saleCount: sSales.length,
                 ticketPromedio: sSales.length > 0 ? totalSold / sSales.length : 0,
@@ -833,7 +838,7 @@ export default function VendedoresPage() {
                             name: '',
                             email: '',
                             role: 'Vendedor',
-                            commissionRate: 5,
+                            commissionRate: 10,
                             creditLevel: 1,
                         } as any}
                         onSubmit={handleCreateSellerSubmit}

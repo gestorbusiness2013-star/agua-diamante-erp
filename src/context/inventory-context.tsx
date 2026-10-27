@@ -203,19 +203,23 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 process: (doc: any) => {
                     const raw = doc.data();
                     const s = convertTimestampsToDates({...raw, id: doc.id}) as Sale;
-                    if (s && s.saleType !== 'Cortesía' && (s.commissionAmount === undefined || s.commissionAmount === null || s.commissionAmount === 0)) {
+                    if (s && s.saleType !== 'Cortesía') {
                         const userName = (s.user || '').trim().toLowerCase();
+                        const isRobertOrSeller = userName.includes('robert') || userName.includes('vivas') || userName.includes('sofia');
                         let rate = Number(s.commissionRate);
-                        if (isNaN(rate) || rate <= 0) {
-                            if (userName.includes('robert') || userName.includes('vivas') || userName.includes('sofia')) {
-                                rate = 5;
+                        if (isNaN(rate) || rate <= 0 || (isRobertOrSeller && rate === 5)) {
+                            if (isRobertOrSeller) {
+                                rate = 10;
                             }
                         }
                         if (rate > 0) {
-                            s.commissionRate = rate;
-                            s.commissionAmount = (Number(s.totalAmount) || 0) * (rate / 100);
-                            if (doc.ref) {
-                                updateDoc(doc.ref, { commissionRate: rate, commissionAmount: s.commissionAmount }).catch(() => {});
+                            const expectedCommission = (Number(s.totalAmount) || 0) * (rate / 100);
+                            if (s.commissionRate !== rate || s.commissionAmount !== expectedCommission) {
+                                s.commissionRate = rate;
+                                s.commissionAmount = expectedCommission;
+                                if (doc.ref) {
+                                    updateDoc(doc.ref, { commissionRate: rate, commissionAmount: expectedCommission }).catch(() => {});
+                                }
                             }
                         }
                     }
@@ -231,9 +235,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 const processed = convertTimestampsToDates({...data, id: doc.id});
                 const name = (processed.name || '').trim().toLowerCase();
                 const isRobert = name.includes('robert');
-                const commissionRate = (processed.commissionRate !== undefined && processed.commissionRate !== null && !isNaN(Number(processed.commissionRate)))
-                    ? Number(processed.commissionRate)
-                    : (isRobert || processed.role === 'Vendedor' ? 5 : undefined);
+                const rawRate = Number(processed.commissionRate);
+                const commissionRate = (!isNaN(rawRate) && rawRate > 0 && rawRate !== 5)
+                    ? rawRate
+                    : (isRobert || processed.role === 'Vendedor' ? 10 : undefined);
                 // Ensure required fields have safe defaults to prevent render crashes
                 return {
                     ...processed,
@@ -611,9 +616,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             ) || currentUser;
 
             let effectiveCommissionRate = Number(creatorUser.commissionRate);
-            if (isNaN(effectiveCommissionRate) || effectiveCommissionRate <= 0) {
+            if (isNaN(effectiveCommissionRate) || effectiveCommissionRate <= 0 || (effectiveCommissionRate === 5 && (creatorUser.role === 'Vendedor' || (currentUser.name || '').toLowerCase().includes('robert')))) {
                 if (creatorUser.role === 'Vendedor' || (currentUser.name || '').toLowerCase().includes('robert') || (creatorUser.name || '').toLowerCase().includes('robert')) {
-                    effectiveCommissionRate = 5;
+                    effectiveCommissionRate = 10;
                 } else {
                     effectiveCommissionRate = 0;
                 }
@@ -853,9 +858,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                     (u.email || '').trim().toLowerCase() === sellerName
                 );
                 let rate = Number(dataToUpdate.commissionRate) || Number(seller?.commissionRate);
-                if (isNaN(rate) || rate <= 0) {
+                if (isNaN(rate) || rate <= 0 || (rate === 5 && (sellerName.includes('robert') || seller?.role === 'Vendedor'))) {
                     if (sellerName.includes('robert') || seller?.role === 'Vendedor') {
-                        rate = 5;
+                        rate = 10;
                     }
                 }
                 if (rate > 0) {

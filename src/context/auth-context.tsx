@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                             email: firebaseUser.email!,
                             name: initialUser?.name || firebaseUser.displayName || firebaseUser.email!.split('@')[0] || "Nuevo Usuario",
                             role,
-                            commissionRate: initialUser?.commissionRate || (initialUser?.role === 'Vendedor' ? 5 : undefined),
+                            commissionRate: initialUser?.commissionRate || (initialUser?.role === 'Vendedor' ? 10 : undefined),
                             permissions: getDefaultPermissions(role),
                         };
 

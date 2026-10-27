@@ -341,15 +341,20 @@ export default function SalesPage() {
     
     const getSaleCommission = (sale: Sale): number => {
         if (!sale || sale.saleType === 'Cortesía') return 0;
+        const userStr = (sale.user || '').trim().toLowerCase();
+        const isRobertOrSeller = userStr.includes('robert') || userStr.includes('vivas') || userStr.includes('sofia');
+        
+        if (isRobertOrSeller) {
+            const rawRate = Number(sale.commissionRate);
+            const rate = (!isNaN(rawRate) && rawRate > 0 && rawRate !== 5) ? rawRate : 10;
+            return (Number(sale.totalAmount) || 0) * (rate / 100);
+        }
+
         if (sale.commissionAmount !== null && sale.commissionAmount !== undefined && Number(sale.commissionAmount) > 0) {
             return Number(sale.commissionAmount);
         }
         if (sale.commissionRate && Number(sale.commissionRate) > 0) {
             return (Number(sale.totalAmount) || 0) * (Number(sale.commissionRate) / 100);
-        }
-        const userStr = (sale.user || '').trim().toLowerCase();
-        if (userStr.includes('robert') || userStr.includes('vivas') || userStr.includes('sofia')) {
-            return (Number(sale.totalAmount) || 0) * 0.05;
         }
         return 0;
     };

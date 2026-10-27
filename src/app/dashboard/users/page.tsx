@@ -94,7 +94,7 @@ export default function UsersPage() {
                                                 <span className="text-muted-foreground text-xs">-</span>
                                             )}
                                         </TableCell>
-                                        <TableCell className="text-right">{u.role === 'Vendedor' ? `${u.commissionRate}%` : 'N/A'}</TableCell>
+                                        <TableCell className="text-right">{(u.commissionRate !== undefined && u.commissionRate !== null && Number(u.commissionRate) > 0) ? `${u.commissionRate}%` : (u.role === 'Vendedor' ? '10%' : 'N/A')}</TableCell>
                                         <TableCell>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
